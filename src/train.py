@@ -1,5 +1,5 @@
 import torch
-from dataloader import MRDataset
+from datasets.main import load_dataset
 from model import Net
 import os
 import numpy as np
@@ -49,6 +49,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
+    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
@@ -59,6 +61,8 @@ if __name__ == '__main__':
 
     args = parse_arguments()
     model_name = args.model_name
+    dataset_name = args.dataset
+    normal_class = args.normal_class
     epochs = args.epochs
     data_path = args.data_path
     if args.index != []:
@@ -67,8 +71,9 @@ if __name__ == '__main__':
         meta = pd.read_csv('metadata.csv')
         indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
-    train_dataset = MRDataset(data_path, 'sagittal', indexes, transform=None, train=True)
+    train_dataset = load_dataset(dataset_name, data_path, normal_class)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     criterion = ContrastiveLoss()
+    train(model, train_dataset, epochs, criterion, model_name, indexes)
