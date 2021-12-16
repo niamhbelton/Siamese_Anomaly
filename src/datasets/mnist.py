@@ -72,21 +72,6 @@ class MNIST(data.Dataset):
 
 
 
-    def _check_legacy_exist(self):
-        processed_folder_exists = os.path.exists(self.processed_folder)
-        if not processed_folder_exists:
-            return False
-
-        return all(
-            check_integrity(os.path.join(self.processed_folder, file)) for file in (self.training_file, self.test_file)
-        )
-
-    def _load_legacy_data(self):
-        # This is for BC only. We no longer cache the data in a custom binary, but simply read from the raw data
-        # directly.
-        data_file = self.training_file if self.train else self.test_file
-        return torch.load(os.path.join(self.processed_folder, data_file))
-
 
     def get_int(self, b: bytes) -> int:
         return int(codecs.encode(b, 'hex'), 16)
