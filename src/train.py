@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
 
     train = True
-    train_dataset = load_dataset(dataset_name, indexes, data_path, normal_class, train, download_data)
+    train_dataset = load_dataset(dataset_name, indexes, data_path, normal_class, train, data_path, download_data)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)

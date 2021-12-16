@@ -45,12 +45,12 @@ class MNIST(data.Dataset):
 
 
     def __init__(self, indexes, root: str, normal_class: int = 0,
-            train: bool = True,
+            train: bool = True, data_path,
             download_data = False,
     ) -> None:
         super().__init__()
         self.train = train  # training set or test set
-        self.data_folder = './data/'
+        self.data_path = data_path
         self.indexes = indexes
         self.normal_class = normal_class
         self.download_data = download_data
@@ -121,10 +121,10 @@ class MNIST(data.Dataset):
 
     def _load_data(self):
         image_file = f"{'train' if self.train else 't10k'}-images-idx3-ubyte"
-        data = self.read_image_file(os.path.join(self.data_folder, image_file))
+        data = self.read_image_file(os.path.join(self.data_path, image_file))
 
         label_file = f"{'train' if self.train else 't10k'}-labels-idx1-ubyte"
-        targets = self.read_label_file(os.path.join(self.data_folder, label_file))
+        targets = self.read_label_file(os.path.join(self.data_path, label_file))
 
         if self.train:
             data = data[self.indexes]
@@ -184,7 +184,7 @@ class MNIST(data.Dataset):
 
     def _check_exists(self) -> bool:
         return all(
-            check_integrity(os.path.join(self.data_folder, os.path.splitext(os.path.basename(url))[0]))
+            check_integrity(os.path.join(self.data_path, os.path.splitext(os.path.basename(url))[0]))
             for url, _ in self.resources
         )
 
@@ -203,7 +203,7 @@ class MNIST(data.Dataset):
                 try:
                     print("Downloading {}".format(url))
                     download_and_extract_archive(
-                        url, download_root=self.data_folder,
+                        url, download_root=self.data_path,
                         filename=filename,
                         md5=md5
                     )
