@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import random
 import os
 import codecs
-
+import numpy as np
 
 class MNIST(data.Dataset):
     """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
@@ -44,8 +44,8 @@ class MNIST(data.Dataset):
 
 
 
-    def __init__(self, indexes, root: str, normal_class: int = 0,
-            train: bool = True, data_path,
+    def __init__(self, indexes, root: str, normal_class,
+            train, data_path,
             download_data = False,
     ) -> None:
         super().__init__()
@@ -144,9 +144,7 @@ class MNIST(data.Dataset):
 
         img, target = self.data[index], int(self.targets[index])
 
-        img = Image.fromarray(img.numpy(), mode='L')
-
-
+    #    img = Image.fromarray(img.numpy(), mode='L')
 
         label = torch.FloatTensor([0])
         img2 = None
@@ -156,7 +154,7 @@ class MNIST(data.Dataset):
                 ind = np.random.randint(len(self.indexes) + 1) -1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-            img2 = Image.fromarray(img2.numpy(), mode='L')
+            #img2 = Image.fromarray(img2.numpy(), mode='L')
 
             label = torch.FloatTensor([0])
         else:

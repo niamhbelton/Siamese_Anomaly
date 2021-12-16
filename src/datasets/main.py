@@ -1,8 +1,8 @@
 from .mnist import MNIST
-from .cifar10 import CIFAR10_Dataset
+#from .cifar10 import CIFAR10_Dataset
 
 
-def load_dataset(dataset_name, indexes, data_path, normal_class, train, data_path, download_data,
+def load_dataset(dataset_name, indexes, normal_class, train, data_path, download_data,
                  random_state=None):
     """Loads the dataset."""
 

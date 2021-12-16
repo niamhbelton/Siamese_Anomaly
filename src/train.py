@@ -22,19 +22,20 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
     device='cuda'
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
+    ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
         model.train()
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
-        np.random.shuffle(indexes)
+        np.random.shuffle(ind)
         for index in indexes:
             img1, img2, labels = train_dataset.__getitem__(index)
             # Forward
             img1 = img1.to(device)
             img2 = img2.to(device)
             labels = labels.to(device)
-            output1 = model.forward(img1)
-            output2 = model.forward(img2)
+            output1 = model.forward(img1.float())
+            output2 = model.forward(img2.float())
             loss = criterion(output1,output2,labels)
 
             # Backward and optimize
@@ -75,8 +76,7 @@ if __name__ == '__main__':
 
 
 
-    train = True
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, train, data_path, download_data)
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
