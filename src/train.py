@@ -53,6 +53,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
+    parser.add_argument('--download_data',  default=True)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -65,13 +66,17 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     epochs = args.epochs
     data_path = args.data_path
+    download_data = args.download_data
     if args.index != []:
         indexes = [int(item) for item in args.index.split(', ')]
     else:
         meta = pd.read_csv('metadata.csv')
         indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
-    train_dataset = load_dataset(dataset_name, data_path, normal_class)
+
+
+    train = True
+    train_dataset = load_dataset(dataset_name, indexes, data_path, normal_class, train, download_data)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)

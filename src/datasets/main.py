@@ -1,9 +1,8 @@
-from .mnist import MNIST_Dataset
+from .mnist import MNIST
 from .cifar10 import CIFAR10_Dataset
 
 
-def load_dataset(dataset_name, data_path, normal_class, known_outlier_class, n_known_outlier_classes: int = 0,
-                 ratio_known_normal: float = 0.0, ratio_known_outlier: float = 0.0, ratio_pollution: float = 0.0,
+def load_dataset(dataset_name, indexes, data_path, normal_class, train, download_data,
                  random_state=None):
     """Loads the dataset."""
 
@@ -13,17 +12,17 @@ def load_dataset(dataset_name, data_path, normal_class, known_outlier_class, n_k
     dataset = None
 
     if dataset_name == 'mnist':
-        dataset = MNIST_Dataset(root=data_path,
+        dataset = MNIST(indexes = indexes,
+                                root=data_path,
                                 normal_class=normal_class,
-                                known_outlier_class=known_outlier_class,
-                                n_known_outlier_classes=n_known_outlier_classes,
-                                ratio_known_normal=ratio_known_normal,
-                                ratio_known_outlier=ratio_known_outlier,
-                                ratio_pollution=ratio_pollution)
+                                train = train,
+                                download_data = download_data)
+
 
     if dataset_name == 'cifar10':
         dataset = CIFAR10_Dataset(root=data_path,
                                   normal_class=normal_class,
+                                  indexes = indexes,
                                   known_outlier_class=known_outlier_class,
                                   n_known_outlier_classes=n_known_outlier_classes,
                                   ratio_known_normal=ratio_known_normal,
