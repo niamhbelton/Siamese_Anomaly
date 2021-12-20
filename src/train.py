@@ -28,7 +28,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
         np.random.shuffle(ind)
-        for index in indexes:
+        for index in ind:
             img1, img2, labels = train_dataset.__getitem__(index)
             # Forward
             img1 = img1.to(device)
@@ -73,8 +73,6 @@ if __name__ == '__main__':
     else:
         meta = pd.read_csv('metadata.csv')
         indexes = list(meta.loc[meta['ref_set']==1, 'id'])
-
-
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
     model = Net()

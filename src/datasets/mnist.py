@@ -141,13 +141,11 @@ class MNIST(data.Dataset):
             tuple: (image, target) where target is index of the target class.
         """
 
-
         img, target = self.data[index], int(self.targets[index])
 
     #    img = Image.fromarray(img.numpy(), mode='L')
 
-        label = torch.FloatTensor([0])
-        img2 = None
+
         if self.train:
             ind = np.random.randint(len(self.indexes) + 1) -1
             while (ind == index):
@@ -158,8 +156,10 @@ class MNIST(data.Dataset):
 
             label = torch.FloatTensor([0])
         else:
-            if target != self.normal_class:
-                label = torch.FloatTensor([1])
+            img2 = torch.Tensor([1])
+            label = target
+        #    if target != self.normal_class:
+            #    label = torch.FloatTensor([1])
 
         return img, img2, label
 
