@@ -22,19 +22,20 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
     device='cuda'
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
+    ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
         model.train()
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
-        np.random.shuffle(indexes)
-        for index in indexes:
+        np.random.shuffle(ind)
+        for index in ind:
             img1, img2, labels = train_dataset.__getitem__(index)
             # Forward
             img1 = img1.to(device)
             img2 = img2.to(device)
             labels = labels.to(device)
-            output1 = model.forward(img1)
-            output2 = model.forward(img2)
+            output1 = model.forward(img1.float())
+            output2 = model.forward(img2.float())
             loss = criterion(output1,output2,labels)
 
             # Backward and optimize
@@ -53,6 +54,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
+    parser.add_argument('--download_data',  default=True)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -65,13 +67,14 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     epochs = args.epochs
     data_path = args.data_path
+    download_data = args.download_data
     if args.index != []:
         indexes = [int(item) for item in args.index.split(', ')]
     else:
         meta = pd.read_csv('metadata.csv')
         indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
-    train_dataset = load_dataset(dataset_name, data_path, normal_class)
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)

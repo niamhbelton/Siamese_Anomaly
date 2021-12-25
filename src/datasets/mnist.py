@@ -1,84 +1,220 @@
-from torch.utils.data import Subset
+import torch.utils.data as data
 from PIL import Image
-from torchvision.datasets import MNIST
-from base.torchvision_dataset import TorchvisionDataset
-from .preprocessing import create_semisupervised_setting
-
+from torchvision.datasets.utils import download_and_extract_archive, extract_archive, verify_str_arg, check_integrity
 import torch
 import torchvision.transforms as transforms
 import random
+import os
+import codecs
+import numpy as np
 
+class MNIST(data.Dataset):
+    """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
 
-class MNIST_Dataset(TorchvisionDataset):
-
-    def __init__(self, root: str, normal_class: int = 0, known_outlier_class: int = 1, n_known_outlier_classes: int = 0,
-                 ratio_known_normal: float = 0.0, ratio_known_outlier: float = 0.0, ratio_pollution: float = 0.0):
-        super().__init__(root)
-
-        # Define normal and outlier classes
-        self.n_classes = 2  # 0: normal, 1: outlier
-        self.normal_classes = tuple([normal_class])
-        self.outlier_classes = list(range(0, 10))
-        self.outlier_classes.remove(normal_class)
-        self.outlier_classes = tuple(self.outlier_classes)
-
-        if n_known_outlier_classes == 0:
-            self.known_outlier_classes = ()
-        elif n_known_outlier_classes == 1:
-            self.known_outlier_classes = tuple([known_outlier_class])
-        else:
-            self.known_outlier_classes = tuple(random.sample(self.outlier_classes, n_known_outlier_classes))
-
-        # MNIST preprocessing: feature scaling to [0, 1]
-        transform = transforms.ToTensor()
-        target_transform = transforms.Lambda(lambda x: int(x in self.outlier_classes))
-
-        # Get train set
-        train_set = MyMNIST(root=self.root, train=True, transform=transform, target_transform=target_transform,
-                            download=True)
-
-        # Create semi-supervised setting
-        idx, _, semi_targets = create_semisupervised_setting(train_set.targets.cpu().data.numpy(), self.normal_classes,
-                                                             self.outlier_classes, self.known_outlier_classes,
-                                                             ratio_known_normal, ratio_known_outlier, ratio_pollution)
-        train_set.semi_targets[idx] = torch.tensor(semi_targets)  # set respective semi-supervised labels
-
-        # Subset train_set to semi-supervised setup
-        self.train_set = Subset(train_set, idx)
-
-        # Get test set
-        self.test_set = MyMNIST(root=self.root, train=False, transform=transform, target_transform=target_transform,
-                                download=True)
-
-
-class MyMNIST(MNIST):
-    """
-    Torchvision MNIST class with additional targets for the semi-supervised setting and patch of __getitem__ method
-    to also return the semi-supervised target as well as the index of a data sample.
+    Args:
+        root (string): Root directory of dataset where ``MNIST/processed/training.pt``
+            and  ``MNIST/processed/test.pt`` exist.
+        train (bool, optional): If True, creates dataset from ``training.pt``,
+            otherwise from ``test.pt``.
+        download (bool, optional): If true, downloads the dataset from the internet and
+            puts it in root directory. If dataset is already downloaded, it is not
+            downloaded again.
+        transform (callable, optional): A function/transform that  takes in an PIL image
+            and returns a transformed version. E.g, ``transforms.RandomCrop``
+        target_transform (callable, optional): A function/transform that takes in the
+            target and transforms it.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(MyMNIST, self).__init__(*args, **kwargs)
+    mirrors = [
+        'http://yann.lecun.com/exdb/mnist/',
+        'https://ossci-datasets.s3.amazonaws.com/mnist/',
+    ]
 
-        self.semi_targets = torch.zeros_like(self.targets)
+    resources = [
+        ("train-images-idx3-ubyte.gz", "f68b3c2dcbeaaa9fbdd348bbdeb94873"),
+        ("train-labels-idx1-ubyte.gz", "d53e105ee54ea40749a09fcbcd1e9432"),
+        ("t10k-images-idx3-ubyte.gz", "9fb629c4189551a2d022fa330f9573f3"),
+        ("t10k-labels-idx1-ubyte.gz", "ec29112dd5afa0611ce80d1b7f02629c")
+    ]
 
-    def __getitem__(self, index):
-        """Override the original method of the MNIST class.
+    training_file = 'training.pt'
+    test_file = 'test.pt'
+    classes = ['0 - zero', '1 - one', '2 - two', '3 - three', '4 - four',
+               '5 - five', '6 - six', '7 - seven', '8 - eight', '9 - nine']
+
+
+
+    def __init__(self, indexes, root: str, normal_class,
+            train, data_path,
+            download_data = False,
+    ) -> None:
+        super().__init__()
+        self.train = train  # training set or test set
+        self.data_path = data_path
+        self.indexes = indexes
+        self.normal_class = normal_class
+        self.download_data = download_data
+
+
+
+        if self.download_data:
+            self.download()
+
+        if not self._check_exists():
+            raise RuntimeError('Dataset not found.' +
+                               ' You can use download=True to download it')
+
+        self.data, self.targets = self._load_data()
+
+        self.targets[self.targets != normal_class] = 1
+        self.targets[self.targets == normal_class] = 0
+
+
+
+
+
+    def get_int(self, b: bytes) -> int:
+        return int(codecs.encode(b, 'hex'), 16)
+
+    def read_sn3_pascalvincent_tensor(self, path: str, strict: bool = True) -> torch.Tensor:
+        """Read a SN3 file in "Pascal Vincent" format (Lush file 'libidx/idx-io.lsh').
+           Argument may be a filename, compressed filename, or file object.
+        """
+        # read
+        SN3_PASCALVINCENT_TYPEMAP = {
+        8: (torch.uint8, np.uint8, np.uint8),
+        9: (torch.int8, np.int8, np.int8),
+        11: (torch.int16, np.dtype('>i2'), 'i2'),
+        12: (torch.int32, np.dtype('>i4'), 'i4'),
+        13: (torch.float32, np.dtype('>f4'), 'f4'),
+        14: (torch.float64, np.dtype('>f8'), 'f8')
+        }
+
+        with open(path, "rb") as f:
+            data = f.read()
+        # parse
+        magic = self.get_int(data[0:4])
+        nd = magic % 256
+        ty = magic // 256
+        assert 1 <= nd <= 3
+        assert 8 <= ty <= 14
+        m = SN3_PASCALVINCENT_TYPEMAP[ty]
+        s = [self.get_int(data[4 * (i + 1): 4 * (i + 2)]) for i in range(nd)]
+        parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
+        assert parsed.shape[0] == np.prod(s) or not strict
+        return torch.from_numpy(parsed.astype(m[2])).view(*s)
+
+    def read_image_file(self, path: str) -> torch.Tensor:
+        x = self.read_sn3_pascalvincent_tensor(path, strict=False)
+        assert(x.dtype == torch.uint8)
+        assert(x.ndimension() == 3)
+        return x
+
+    def read_label_file(self, path: str) -> torch.Tensor:
+        x = self.read_sn3_pascalvincent_tensor(path, strict=False)
+        assert(x.dtype == torch.uint8)
+        assert(x.ndimension() == 1)
+        return x.long()
+
+
+
+
+    def _load_data(self):
+        image_file = f"{'train' if self.train else 't10k'}-images-idx3-ubyte"
+        data = self.read_image_file(os.path.join(self.data_path, image_file))
+
+        label_file = f"{'train' if self.train else 't10k'}-labels-idx1-ubyte"
+        targets = self.read_label_file(os.path.join(self.data_path, label_file))
+
+        if self.train:
+            data = data[self.indexes]
+            targets = targets[self.indexes]
+
+        return data, targets
+
+    def __getitem__(self, index: int):
+        """
         Args:
             index (int): Index
+
         Returns:
-            tuple: (image, target, semi_target, index)
+            tuple: (image, target) where target is index of the target class.
         """
-        img, target, semi_target = self.data[index], int(self.targets[index]), int(self.semi_targets[index])
 
-        # doing this so that it is consistent with all other datasets
-        # to return a PIL Image
-        img = Image.fromarray(img.numpy(), mode='L')
+        img, target = self.data[index], int(self.targets[index])
 
-        if self.transform is not None:
-            img = self.transform(img)
+    #    img = Image.fromarray(img.numpy(), mode='L')
 
-        if self.target_transform is not None:
-            target = self.target_transform(target)
 
-        return img, target, semi_target, index
+        if self.train:
+            ind = np.random.randint(len(self.indexes) + 1) -1
+            while (ind == index):
+                ind = np.random.randint(len(self.indexes) + 1) -1
+
+            img2, target2 = self.data[ind], int(self.targets[ind])
+            #img2 = Image.fromarray(img2.numpy(), mode='L')
+
+            label = torch.FloatTensor([0])
+        else:
+            img2 = torch.Tensor([1])
+            label = target
+        #    if target != self.normal_class:
+            #    label = torch.FloatTensor([1])
+
+        return img, img2, label
+
+
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    @property
+    def raw_folder(self) -> str:
+        return os.path.join(self.root, self.__class__.__name__, 'raw')
+
+    @property
+    def processed_folder(self) -> str:
+        return os.path.join(self.root, self.__class__.__name__, 'processed')
+
+    @property
+    def class_to_idx(self):
+        return {_class: i for i, _class in enumerate(self.classes)}
+
+    def _check_exists(self) -> bool:
+        return all(
+            check_integrity(os.path.join(self.data_path, os.path.splitext(os.path.basename(url))[0]))
+            for url, _ in self.resources
+        )
+
+    def download(self) -> None:
+        """Download the MNIST data if it doesn't exist already."""
+
+        if self._check_exists():
+            return
+
+        os.makedirs('./data/', exist_ok=True)
+
+        # download files
+        for filename, md5 in self.resources:
+            for mirror in self.mirrors:
+                url = "{}{}".format(mirror, filename)
+                try:
+                    print("Downloading {}".format(url))
+                    download_and_extract_archive(
+                        url, download_root=self.data_path,
+                        filename=filename,
+                        md5=md5
+                    )
+                except URLError as error:
+                    print(
+                        "Failed to download (trying next):\n{}".format(error)
+                    )
+                    continue
+                finally:
+                    print()
+                break
+            else:
+                raise RuntimeError("Error downloading {}".format(filename))
+
+    def extra_repr(self) -> str:
+        return "Split: {}".format("Train" if self.train is True else "Test")
