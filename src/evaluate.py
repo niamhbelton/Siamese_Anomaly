@@ -1,6 +1,5 @@
 import torch.nn.functional as F
 import torch
-from dataloader_val import Dataset
 from model import Net
 import os
 import numpy as np
