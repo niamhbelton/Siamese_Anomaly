@@ -45,11 +45,11 @@ class MNIST(data.Dataset):
 
 
     def __init__(self, indexes, root: str, normal_class,
-            train, data_path,
+            task, data_path,
             download_data = False,
     ) -> None:
         super().__init__()
-        self.train = train  # training set or test set
+        self.task = task  # training set or test set
         self.data_path = data_path
         self.indexes = indexes
         self.normal_class = normal_class
@@ -120,15 +120,24 @@ class MNIST(data.Dataset):
 
 
     def _load_data(self):
-        image_file = f"{'train' if self.train else 't10k'}-images-idx3-ubyte"
-        data = self.read_image_file(os.path.join(self.data_path, image_file))
 
-        label_file = f"{'train' if self.train else 't10k'}-labels-idx1-ubyte"
-        targets = self.read_label_file(os.path.join(self.data_path, label_file))
+        if (self.task == 0) || (self.task == 2):
+            image_file = "train-images-idx3-ubyte"
+            data = self.read_image_file(os.path.join(self.data_path, image_file))
+            label_file = "train-labels-idx1-ubyte"
+            targets = self.read_label_file(os.path.join(self.data_path, label_file))
+        else:
+            image_file = "t10k-images-idx3-ubyte"
+            data = self.read_image_file(os.path.join(self.data_path, image_file))
+            label_file = "t10k-labels-idx1-ubyte"
+            targets = self.read_label_file(os.path.join(self.data_path, label_file))
 
-        if self.train:
+        if self.task == 0:
             data = data[self.indexes]
             targets = targets[self.indexes]
+        elif self.task == 2:
+            data = data[-self.indexes]
+            targets = targets[-self.indexes]
 
         return data, targets
 
@@ -146,7 +155,7 @@ class MNIST(data.Dataset):
     #    img = Image.fromarray(img.numpy(), mode='L')
 
 
-        if self.train:
+        if self.task == 0:
             ind = np.random.randint(len(self.indexes) + 1) -1
             while (ind == index):
                 ind = np.random.randint(len(self.indexes) + 1) -1
@@ -217,4 +226,4 @@ class MNIST(data.Dataset):
                 raise RuntimeError("Error downloading {}".format(filename))
 
     def extra_repr(self) -> str:
-        return "Split: {}".format("Train" if self.train is True else "Test")
+        return "Split: {}".format("Train" if self.task == 0 else "Test")

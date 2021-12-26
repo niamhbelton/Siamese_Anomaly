@@ -10,7 +10,7 @@ from sklearn import metrics
 from datasets.main import load_dataset
 
 
-def evaluate(model, dataset_name, normal_class, output_name, indexes, data_path):
+def evaluate(model, testing, dataset_name, normal_class, output_name, indexes, data_path):
 
     model.cuda()
     model.eval()
@@ -18,8 +18,11 @@ def evaluate(model, dataset_name, normal_class, output_name, indexes, data_path)
     #ref_dataset = Dataset(data_path, 'sagittal')
     #loader = torch.utils.data.DataLoader(ref_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
 
-    ref_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data=False)
-    test = load_dataset(dataset_name, indexes, normal_class, False, data_path, download_data=False)
+    ref_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data=False)
+    if testing:
+        test = load_dataset(dataset_name, indexes, normal_class, 1, data_path, download_data=False)
+    else: #evaluate on validation data
+        test = load_dataset(dataset_name, indexes, normal_class, 2, data_path, download_data=False)
     loader = torch.utils.data.DataLoader(test, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
     d={} #a dictionary of the reference images
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
@@ -74,6 +77,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--testing', type=bool, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-o', '--output_name', type=str, required=True)
     parser.add_argument('--data_path',  required=True)
@@ -88,6 +92,7 @@ if __name__ == '__main__':
     args = parse_arguments()
     model_name = args.model_name
     dataset = args.dataset
+    testing = args.testing
     normal_class = args.normal_class
     output_name = args.output_name
     data_path = args.data_path
@@ -100,4 +105,4 @@ if __name__ == '__main__':
 
     #test_ind = list(meta.loc[meta['test']==1, 'id'])
     model = torch.load('./outputs/' + model_name)
-    evaluate(model, dataset, normal_class, output_name, indexes, data_path )
+    evaluate(model, testing, dataset, normal_class, output_name, indexes, data_path )

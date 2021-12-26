@@ -7,6 +7,7 @@ import pandas as pd
 import argparse
 import torch.nn.functional as F
 import torch.optim as optim
+from evaluate import evaluate
 
 class ContrastiveLoss(torch.nn.Module):
     def __init__(self, margin=2.0):
@@ -43,8 +44,15 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
             loss.backward()
             optimizer.step()
 
+        output_name = 'output_epoch_' + str(epoch)
+        evaluate(model, False, 'mnist', 0, output_name, indexes, './data/')
+
+
+
     torch.save(model, './outputs/' + model_name)
     print("Finished Training")
+
+
 
 
 def parse_arguments():
@@ -68,11 +76,8 @@ if __name__ == '__main__':
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
-    if args.index != []:
-        indexes = [int(item) for item in args.index.split(', ')]
-    else:
-        meta = pd.read_csv('metadata.csv')
-        indexes = list(meta.loc[meta['ref_set']==1, 'id'])
+    indexes = [int(item) for item in args.index.split(', ')]
+
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
     model = Net()
