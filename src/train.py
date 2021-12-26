@@ -1,12 +1,13 @@
 import torch
 from datasets.main import load_dataset
-from model import Net, Net_simp
+from model import Net
 import os
 import numpy as np
 import pandas as pd
 import argparse
 import torch.nn.functional as F
 import torch.optim as optim
+from evaluate import evaluate
 
 class ContrastiveLoss(torch.nn.Module):
     def __init__(self, margin=2.0):
@@ -42,6 +43,11 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+        output_name = 'output_epoch_' + str(epoch)
+        evaluate(model, False, 'mnist', 0, output_name, indexes, './data/')
+
+
 
     torch.save(model, './outputs/' + model_name)
     print("Finished Training")

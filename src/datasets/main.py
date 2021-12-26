@@ -2,7 +2,7 @@ from .mnist import MNIST
 #from .cifar10 import CIFAR10_Dataset
 
 
-def load_dataset(dataset_name, indexes, normal_class, train, data_path, download_data,
+def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data,
                  random_state=None):
     """Loads the dataset."""
 
@@ -15,7 +15,7 @@ def load_dataset(dataset_name, indexes, normal_class, train, data_path, download
         dataset = MNIST(indexes = indexes,
                                 root=data_path,
                                 normal_class=normal_class,
-                                train = train,
+                                task = task,
                                 data_path = data_path,
                                 download_data = download_data)
 
