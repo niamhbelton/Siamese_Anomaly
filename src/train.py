@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net
+from model import Net, Net_simp
 import os
 import numpy as np
 import pandas as pd

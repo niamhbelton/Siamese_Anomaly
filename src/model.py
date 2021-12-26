@@ -36,7 +36,7 @@ class Net(nn.Module):
 
 class Net_simp(nn.Module):
     def __init__(self):
-        super(Net, self).__init__()
+        super(Net_simp, self).__init__()
         self.conv1 = nn.Sequential(
             nn.Conv2d(
                 in_channels=1,
