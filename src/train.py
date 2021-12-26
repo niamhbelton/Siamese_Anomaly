@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net
+from model import Net, Net_simp
 import os
 import numpy as np
 import pandas as pd
@@ -76,13 +76,11 @@ if __name__ == '__main__':
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
-    if args.index != []:
-        indexes = [int(item) for item in args.index.split(', ')]
-    else:
-        meta = pd.read_csv('metadata.csv')
-        indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
+    indexes = [int(item) for item in args.index.split(', ')]
+
+
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data)
 
     if model_type == 'Net':
         model = Net()

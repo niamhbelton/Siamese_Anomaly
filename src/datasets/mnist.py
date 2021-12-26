@@ -119,26 +119,27 @@ class MNIST(data.Dataset):
 
 
     def _load_data(self):
-
         if (self.task == 0) | (self.task == 2):
             image_file = "train-images-idx3-ubyte"
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "train-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
+            if self.task == 0:
+                data = data[self.indexes]
+                targets = targets[self.indexes]
+
+            elif self.task == 2:
+                lst = list(range(0,len(data) ))
+                ind = [x for i,x in enumerate(lst) if i not in self.indexes]
+                data = data[ind]
+                targets = targets[ind]
         else:
             image_file = "t10k-images-idx3-ubyte"
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "t10k-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
 
-        if self.task == 0:
-            data = data[self.indexes]
-            targets = targets[self.indexes]
-        elif self.task == 2:
-            lst = list(range(0,len(data) ))
-            ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-            data = data[ind]
-            targets = targets[ind]
+
 
         return data, targets
 
@@ -152,7 +153,6 @@ class MNIST(data.Dataset):
 
         img, target = self.data[index], int(self.targets[index])
 
-    #    img = Image.fromarray(img.numpy(), mode='L')
 
 
         if self.task == 0:
@@ -161,14 +161,16 @@ class MNIST(data.Dataset):
                 ind = np.random.randint(len(self.indexes) + 1) -1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-            #img2 = Image.fromarray(img2.numpy(), mode='L')
 
             label = torch.FloatTensor([0])
         else:
             img2 = torch.Tensor([1])
             label = target
+
         #    if target != self.normal_class:
             #    label = torch.FloatTensor([1])
+
+
 
         return img, img2, label
 
