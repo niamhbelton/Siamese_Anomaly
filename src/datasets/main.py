@@ -11,6 +11,7 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
 
     dataset = None
 
+
     if dataset_name == 'mnist':
         dataset = MNIST(indexes = indexes,
                                 root=data_path,
@@ -18,6 +19,9 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
                                 task = task,
                                 data_path = data_path,
                                 download_data = download_data)
+
+
+
 
 
     if dataset_name == 'cifar10':

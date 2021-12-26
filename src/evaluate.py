@@ -10,19 +10,20 @@ from sklearn import metrics
 from datasets.main import load_dataset
 
 
-def evaluate(model, testing, dataset_name, normal_class, output_name, indexes, data_path):
+def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path):
 
     model.cuda()
     model.eval()
 
+
     #ref_dataset = Dataset(data_path, 'sagittal')
     #loader = torch.utils.data.DataLoader(ref_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
 
-    ref_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data=False)
-    if task == 'test':
-        test = load_dataset(dataset_name, indexes, normal_class, 1, data_path, download_data=False)
-    else: #evaluate on validation data
-        test = load_dataset(dataset_name, indexes, normal_class, 2, data_path, download_data=False)
+    ref_dataset = load_dataset(dataset_name, indexes, normal_class, 'train', data_path, download_data=False)
+   # if task == 'test':
+    #    test = load_dataset(dataset_name, indexes, normal_class, 1, data_path, download_data=False)
+  #  else: #evaluate on validation data
+    test = load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data=False)
     loader = torch.utils.data.DataLoader(test, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
     d={} #a dictionary of the reference images
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
@@ -77,7 +78,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
-    parser.add_argument('--task', type=bool, required=True)
+    parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-o', '--output_name', type=str, required=True)
     parser.add_argument('--data_path',  required=True)

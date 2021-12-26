@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     indexes = [int(item) for item in args.index.split(', ')]
     task = 'train'
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data)
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
 
     if model_type == 'Net':
         model = Net()

@@ -65,12 +65,8 @@ class MNIST(data.Dataset):
                                ' You can use download=True to download it')
 
         self.data, self.targets = self._load_data()
-
         self.targets[self.targets != normal_class] = 1
         self.targets[self.targets == normal_class] = 0
-
-
-
 
 
     def get_int(self, b: bytes) -> int:
@@ -129,6 +125,7 @@ class MNIST(data.Dataset):
                 data = data[self.indexes]
                 targets = targets[self.indexes]
 
+
             elif self.task == 'validate':
                 lst = list(range(0,len(data) ))
                 ind = [x for i,x in enumerate(lst) if i not in self.indexes]
@@ -155,7 +152,7 @@ class MNIST(data.Dataset):
 
 
 
-        if self.task == 0:
+        if self.task == 'train':
             ind = np.random.randint(len(self.indexes) + 1) -1
             while (ind == index):
                 ind = np.random.randint(len(self.indexes) + 1) -1
@@ -166,10 +163,6 @@ class MNIST(data.Dataset):
         else:
             img2 = torch.Tensor([1])
             label = target
-
-        #    if target != self.normal_class:
-            #    label = torch.FloatTensor([1])
-
 
 
         return img, img2, label
