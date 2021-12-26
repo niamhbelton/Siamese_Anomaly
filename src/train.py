@@ -79,7 +79,7 @@ if __name__ == '__main__':
     indexes = [int(item) for item in args.index.split(', ')]
 
 
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, True, data_path, download_data)
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data)
     model = Net()
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)

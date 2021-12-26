@@ -121,7 +121,7 @@ class MNIST(data.Dataset):
 
     def _load_data(self):
 
-        if (self.task == 0) || (self.task == 2):
+        if (self.task == 0) | (self.task == 2):
             image_file = "train-images-idx3-ubyte"
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "train-labels-idx1-ubyte"
@@ -136,8 +136,10 @@ class MNIST(data.Dataset):
             data = data[self.indexes]
             targets = targets[self.indexes]
         elif self.task == 2:
-            data = data[-self.indexes]
-            targets = targets[-self.indexes]
+            lst = list(range(0,len(data) ))
+            ind = [x for i,x in enumerate(lst) if i not in self.indexes]
+            data = data[ind]
+            targets = targets[ind]
 
         return data, targets
 
