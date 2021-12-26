@@ -19,7 +19,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, epochs, criterion, model_name, indexes):
+def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class):
     device='cuda'
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
@@ -45,7 +45,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
             optimizer.step()
 
         output_name = 'output_epoch_' + str(epoch)
-        evaluate(model, False, 'mnist', 0, output_name, indexes, './data/')
+        task = 'validate'
+        evaluate(model, task, 'mnist', normal_class, output_name, indexes, data_path)
 
 
 
@@ -80,8 +81,8 @@ if __name__ == '__main__':
     download_data = args.download_data
 
     indexes = [int(item) for item in args.index.split(', ')]
-
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data)
+    task = 'train'
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data)
 
     if model_type == 'Net':
         model = Net()
@@ -92,4 +93,4 @@ if __name__ == '__main__':
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, epochs, criterion, model_name, indexes)
+    train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class)

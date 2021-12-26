@@ -7,6 +7,7 @@ import random
 import os
 import codecs
 import numpy as np
+import random
 
 class MNIST(data.Dataset):
     """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
@@ -119,20 +120,21 @@ class MNIST(data.Dataset):
 
 
     def _load_data(self):
-        if (self.task == 0) | (self.task == 2):
+        if (self.task == 'train') | (self.task == 'validate'):
             image_file = "train-images-idx3-ubyte"
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "train-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
-            if self.task == 0:
+            if self.task == 'train':
                 data = data[self.indexes]
                 targets = targets[self.indexes]
 
-            elif self.task == 2:
+            elif self.task == 'validate':
                 lst = list(range(0,len(data) ))
                 ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-                data = data[ind]
-                targets = targets[ind]
+                randomlist = random.sample(range(0, len(ind)), 10000)
+                data = data[randomlist]
+                targets = targets[randomlist]
         else:
             image_file = "t10k-images-idx3-ubyte"
             data = self.read_image_file(os.path.join(self.data_path, image_file))
