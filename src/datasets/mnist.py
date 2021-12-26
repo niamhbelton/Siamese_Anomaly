@@ -139,8 +139,6 @@ class MNIST(data.Dataset):
             label_file = "t10k-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
 
-
-
         return data, targets
 
     def __getitem__(self, index: int):

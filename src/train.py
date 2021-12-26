@@ -53,6 +53,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
     print("Finished Training")
 
 
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
@@ -79,13 +81,13 @@ if __name__ == '__main__':
 
     indexes = [int(item) for item in args.index.split(', ')]
 
-
     train_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data)
 
     if model_type == 'Net':
         model = Net()
     else:
         model = Net_simp()
+
 
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
