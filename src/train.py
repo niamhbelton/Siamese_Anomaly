@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net
+from model import Net, Net_simp
 import os
 import numpy as np
 import pandas as pd
@@ -58,6 +58,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes):
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
+    parser.add_argument('--model_type', choices = ['Net', 'Net_simp'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
@@ -71,16 +72,23 @@ if __name__ == '__main__':
 
     args = parse_arguments()
     model_name = args.model_name
+    model_type = args.model_type
     dataset_name = args.dataset
     normal_class = args.normal_class
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
+
     indexes = [int(item) for item in args.index.split(', ')]
 
-
     train_dataset = load_dataset(dataset_name, indexes, normal_class, 0, data_path, download_data)
-    model = Net()
+
+    if model_type == 'Net':
+        model = Net()
+    else:
+        model = Net_simp()
+
+
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     criterion = ContrastiveLoss()
