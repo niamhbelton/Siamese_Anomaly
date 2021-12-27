@@ -87,15 +87,12 @@ class CIFAR10(data.Dataset):
                     self.targets.extend(entry['fine_labels'])
 
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
-        self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
+      #  self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
 
-        self.targets[self.targets != normal_class] = 1
-        self.targets[self.targets == normal_class] = 0
+
 
         if self.task == 'train':
-            self.data = self.data[self.indexes]
-            print(self.targets)
-            print(type(self.targets))
+            self.data = np.array(self.data)[self.indexes]
             self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
 
           #  self.targets = self.targets[self.indexes]
@@ -105,9 +102,12 @@ class CIFAR10(data.Dataset):
             lst = list(range(0,len(self.data) ))
             ind = [x for i,x in enumerate(lst) if i not in self.indexes]
             randomlist = random.sample(range(0, len(ind)), 10000)
-            data = data[randomlist]
-            targets = targets[randomlist]
+            self.data = self.data[randomlist]
+            self.targets = np.array(self.targets)[randomlist]
 
+
+        self.targets[self.targets != normal_class] = 1
+        self.targets[self.targets == normal_class] = 0
         self._load_meta()
 
 
@@ -152,8 +152,7 @@ class CIFAR10(data.Dataset):
             img2 = torch.Tensor([1])
             label = target
 
-
-        return img, img2, label
+        return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
 
 
 

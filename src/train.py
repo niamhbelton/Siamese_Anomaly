@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net, Net_simp
+from model import Net, Net_simp, cifar_lenet
 import os
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class):
+def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
@@ -46,7 +46,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
-        evaluate(model, task, 'mnist', normal_class, output_name, indexes, data_path)
+        evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path)
 
 
 
@@ -59,7 +59,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['Net', 'Net_simp'], required=True)
+    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
@@ -86,6 +86,8 @@ if __name__ == '__main__':
 
     if model_type == 'Net':
         model = Net()
+    elif model_type == 'cifar_lenet':
+        model = cifar_lenet()
     else:
         model = Net_simp()
 
@@ -93,4 +95,4 @@ if __name__ == '__main__':
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class)
+    train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)

@@ -1,5 +1,5 @@
 from .mnist import MNIST
-#from .cifar10 import CIFAR10_Dataset
+from .cifar10 import CIFAR10
 
 
 def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data,
@@ -25,7 +25,7 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
 
 
     if dataset_name == 'cifar10':
-        dataset = CIFAR10_Dataset(indexes = indexes,
+        dataset = CIFAR10(indexes = indexes,
                                 root=data_path,
                                 normal_class=normal_class,
                                 task = task,
