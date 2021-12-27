@@ -95,19 +95,19 @@ class CIFAR10(data.Dataset):
             self.data = np.array(self.data)[self.indexes]
             self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
 
-          #  self.targets = self.targets[self.indexes]
-
 
         elif self.task == 'validate':
             lst = list(range(0,len(self.data) ))
             ind = [x for i,x in enumerate(lst) if i not in self.indexes]
             randomlist = random.sample(range(0, len(ind)), 10000)
             self.data = self.data[randomlist]
-            self.targets = np.array(self.targets)[randomlist]
+            self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
 
-
-        self.targets[self.targets != normal_class] = 1
-        self.targets[self.targets == normal_class] = 0
+        self.targets = np.array(self.targets)
+        self.targets[self.targets != normal_class] = -1
+        self.targets[self.targets != normal_class] = -2
+        self.targets[self.targets == -2] = 0
+        self.targets[self.targets == -1] = 1
         self._load_meta()
 
 

@@ -65,8 +65,10 @@ class MNIST(data.Dataset):
                                ' You can use download=True to download it')
 
         self.data, self.targets = self._load_data()
-        self.targets[self.targets != normal_class] = 1
-        self.targets[self.targets == normal_class] = 0
+        self.targets[self.targets != normal_class] = -1
+        self.targets[self.targets == normal_class] = -2
+        self.targets[self.targets == -2] = 0
+        self.targets[self.targets == -1] = 1
 
 
     def get_int(self, b: bytes) -> int:
