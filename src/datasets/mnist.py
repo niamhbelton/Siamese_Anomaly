@@ -71,6 +71,11 @@ class MNIST(data.Dataset):
         self.targets[self.targets == -1] = 1
 
 
+      #  self.targets[self.targets != normal_class] = 1
+     #   self.targets[self.targets == normal_class] = 0
+
+
+
     def get_int(self, b: bytes) -> int:
         return int(codecs.encode(b, 'hex'), 16)
 

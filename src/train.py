@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net, Net_simp, cifar_lenet
+from model import Net, Net_simp, cifar_lenet, MNIST_LeNet
 import os
 import numpy as np
 import pandas as pd
