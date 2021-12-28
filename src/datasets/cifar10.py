@@ -1,8 +1,8 @@
-from torch.utils.data import Subset
 from PIL import Image
-from torchvision.datasets import CIFAR10
-from base.torchvision_dataset import TorchvisionDataset
-from .preprocessing import create_semisupervised_setting
+from torchvision.datasets.utils import download_and_extract_archive, extract_archive, verify_str_arg, check_integrity
+import torch.utils.data as data
+import os
+import pickle
 
 import torch
 import torchvision.transforms as transforms
@@ -10,76 +10,151 @@ import random
 import numpy as np
 
 
-class CIFAR10_Dataset(TorchvisionDataset):
+class CIFAR10(data.Dataset):
+    """`CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
 
-    def __init__(self, root: str, normal_class: int = 5, known_outlier_class: int = 3, n_known_outlier_classes: int = 0,
-                 ratio_known_normal: float = 0.0, ratio_known_outlier: float = 0.0, ratio_pollution: float = 0.0):
-        super().__init__(root)
+    Args:
+        root (string): Root directory of dataset where directory
+            ``cifar-10-batches-py`` exists or will be saved to if download is set to True.
+        train (bool, optional): If True, creates dataset from training set, otherwise
+            creates from test set.
+        transform (callable, optional): A function/transform that takes in an PIL image
+            and returns a transformed version. E.g, ``transforms.RandomCrop``
+        target_transform (callable, optional): A function/transform that takes in the
+            target and transforms it.
+        download (bool, optional): If true, downloads the dataset from the internet and
+            puts it in root directory. If dataset is already downloaded, it is not
+            downloaded again.
 
-        # Define normal and outlier classes
-        self.n_classes = 2  # 0: normal, 1: outlier
-        self.normal_classes = tuple([normal_class])
-        self.outlier_classes = list(range(0, 10))
-        self.outlier_classes.remove(normal_class)
-        self.outlier_classes = tuple(self.outlier_classes)
+    """
+    base_folder = 'cifar-10-batches-py'
+    url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+    filename = "cifar-10-python.tar.gz"
+    tgz_md5 = 'c58f30108f718f92721af3b95e74349a'
+    train_list = [
+        ['data_batch_1', 'c99cafc152244af753f735de768cd75f'],
+        ['data_batch_2', 'd4bba439e000b95fd0a9bffe97cbabec'],
+        ['data_batch_3', '54ebc095f3ab1f0389bbae665268c751'],
+        ['data_batch_4', '634d18415352ddfa80567beed471001a'],
+        ['data_batch_5', '482c414d41f54cd18b22e5b47cb7c3cb'],
+    ]
 
-        if n_known_outlier_classes == 0:
-            self.known_outlier_classes = ()
-        elif n_known_outlier_classes == 1:
-            self.known_outlier_classes = tuple([known_outlier_class])
+    test_list = [
+        ['test_batch', '40351d587109b95175f43aff81a1287e'],
+    ]
+    meta = {
+        'filename': 'batches.meta',
+        'key': 'label_names',
+        'md5': '5ff9c542aee3614f3951f8cda6e48888',
+    }
+
+
+    def __init__(self, indexes, root: str, normal_class,
+            task, data_path,
+            download_data = False):
+        super().__init__()
+
+        self.task = task  # training set or test set
+        self.data_path = data_path
+        self.indexes = indexes
+        self.normal_class = normal_class
+        self.download_data = download_data
+
+
+
+        if self.download_data:
+            self.download()
+
+
+
+        if (self.task == 'train') | (self.task == 'validate'):
+            downloaded_list = self.train_list
         else:
-            self.known_outlier_classes = tuple(random.sample(self.outlier_classes, n_known_outlier_classes))
+            downloaded_list = self.test_list
 
-        # CIFAR-10 preprocessing: feature scaling to [0, 1]
-        transform = transforms.ToTensor()
-        target_transform = transforms.Lambda(lambda x: int(x in self.outlier_classes))
+        self.data: Any = []
+        self.targets = []
 
-        # Get train set
-        train_set = MyCIFAR10(root=self.root, train=True, transform=transform, target_transform=target_transform,
-                              download=True)
+        # now load the picked numpy arrays
+        for file_name, checksum in downloaded_list:
+            file_path = os.path.join(self.data_path, self.base_folder, file_name)
+            with open(file_path, 'rb') as f:
+                entry = pickle.load(f, encoding='latin1')
+                self.data.append(entry['data'])
+                if 'labels' in entry:
+                    self.targets.extend(entry['labels'])
+                else:
+                    self.targets.extend(entry['fine_labels'])
 
-        # Create semi-supervised setting
-        idx, _, semi_targets = create_semisupervised_setting(np.array(train_set.targets), self.normal_classes,
-                                                             self.outlier_classes, self.known_outlier_classes,
-                                                             ratio_known_normal, ratio_known_outlier, ratio_pollution)
-        train_set.semi_targets[idx] = torch.tensor(semi_targets)  # set respective semi-supervised labels
-
-        # Subset train_set to semi-supervised setup
-        self.train_set = Subset(train_set, idx)
-
-        # Get test set
-        self.test_set = MyCIFAR10(root=self.root, train=False, transform=transform, target_transform=target_transform,
-                                  download=True)
+        self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
+      #  self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
 
 
-class MyCIFAR10(CIFAR10):
-    """
-    Torchvision CIFAR10 class with additional targets for the semi-supervised setting and patch of __getitem__ method
-    to also return the semi-supervised target as well as the index of a data sample.
-    """
 
-    def __init__(self, *args, **kwargs):
-        super(MyCIFAR10, self).__init__(*args, **kwargs)
+        if self.task == 'train':
+            self.data = np.array(self.data)[self.indexes]
+            self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
 
-        self.semi_targets = torch.zeros(len(self.targets), dtype=torch.int64)
 
-    def __getitem__(self, index):
-        """Override the original method of the CIFAR10 class.
+        elif self.task == 'validate':
+            lst = list(range(0,len(self.data) ))
+            ind = [x for i,x in enumerate(lst) if i not in self.indexes]
+            randomlist = random.sample(range(0, len(ind)), 10000)
+            self.data = self.data[randomlist]
+            self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
+
+        self.targets = np.array(self.targets)
+        self.targets[self.targets != normal_class] = -1
+        self.targets[self.targets != normal_class] = -2
+        self.targets[self.targets == -2] = 0
+        self.targets[self.targets == -1] = 1
+        self._load_meta()
+
+
+    def _load_meta(self) -> None:
+        path = os.path.join(self.data_path, self.base_folder, self.meta['filename'])
+        with open(path, 'rb') as infile:
+            data = pickle.load(infile, encoding='latin1')
+            self.classes = data[self.meta['key']]
+        self.class_to_idx = {_class: i for i, _class in enumerate(self.classes)}
+
+
+    def download(self) -> None:
+        download_and_extract_archive(self.url, self.data_path, filename=self.filename, md5=self.tgz_md5)
+
+    def extra_repr(self) -> str:
+        return "Split: {}".format("Train" if self.train is True else "Test")
+
+
+
+
+    def __getitem__(self, index: int):
+        """
         Args:
             index (int): Index
         Returns:
-            tuple: (image, target, semi_target, index)
+            tuple: (image, target) where target is index of the target class.
         """
-        img, target, semi_target = self.data[index], self.targets[index], int(self.semi_targets[index])
 
-        # doing this so that it is consistent with all other datasets
-        # to return a PIL Image
-        img = Image.fromarray(img)
+        img, target = self.data[index], int(self.targets[index])
 
-        if self.transform is not None:
-            img = self.transform(img)
 
-        if self.target_transform is not None:
-            target = self.target_transform(target)
 
-        return img, target, semi_target, index
+        if self.task == 'train':
+            ind = np.random.randint(len(self.indexes) + 1) -1
+            while (ind == index):
+                ind = np.random.randint(len(self.indexes) + 1) -1
+
+            img2, target2 = self.data[ind], int(self.targets[ind])
+
+            label = torch.FloatTensor([0])
+        else:
+            img2 = torch.Tensor([1])
+            label = target
+
+        return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
+
+
+
+    def __len__(self) -> int:
+        return len(self.data)
