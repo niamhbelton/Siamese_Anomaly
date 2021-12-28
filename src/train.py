@@ -59,7 +59,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet'], required=True)
+    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
@@ -88,6 +88,8 @@ if __name__ == '__main__':
         model = Net()
     elif model_type == 'cifar_lenet':
         model = cifar_lenet()
+    elif model_type == 'MNIST_LeNet':
+        model = MNIST_LeNet()
     else:
         model = Net_simp()
 
