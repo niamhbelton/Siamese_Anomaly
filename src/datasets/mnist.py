@@ -2,7 +2,6 @@ import torch.utils.data as data
 from PIL import Image
 from torchvision.datasets.utils import download_and_extract_archive, extract_archive, verify_str_arg, check_integrity
 import torch
-import torchvision.transforms as transforms
 import random
 import os
 import codecs
@@ -65,15 +64,12 @@ class MNIST(data.Dataset):
                                ' You can use download=True to download it')
 
         self.data, self.targets = self._load_data()
-        self.targets[self.targets != normal_class] = -1
-        self.targets[self.targets == normal_class] = -2
-        self.targets[self.targets == -2] = 0
-        self.targets[self.targets == -1] = 1
 
-
-      #  self.targets[self.targets != normal_class] = 1
-     #   self.targets[self.targets == normal_class] = 0
-
+        if self.indexes != []:
+          self.targets[self.targets != normal_class] = -1
+          self.targets[self.targets == normal_class] = -2
+          self.targets[self.targets == -2] = 0
+          self.targets[self.targets == -1] = 1
 
 
     def get_int(self, b: bytes) -> int:
@@ -128,7 +124,7 @@ class MNIST(data.Dataset):
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "train-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
-            if self.task == 'train':
+            if (self.task == 'train') & (self.indexes != []):
                 data = data[self.indexes]
                 targets = targets[self.indexes]
 

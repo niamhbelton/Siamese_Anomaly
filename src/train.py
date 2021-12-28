@@ -8,6 +8,8 @@ import argparse
 import torch.nn.functional as F
 import torch.optim as optim
 from evaluate import evaluate
+import random
+
 
 class ContrastiveLoss(torch.nn.Module):
     def __init__(self, margin=2.0):
@@ -56,12 +58,23 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
 
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N):
+    indexes = []
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
+    ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
+    samp = random.sample(range(0, len(ind)), N)
+
+    return ind[samp]
+
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
+    parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -76,12 +89,19 @@ if __name__ == '__main__':
     model_type = args.model_type
     dataset_name = args.dataset
     normal_class = args.normal_class
+    N = args.num_ref
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
-
-    indexes = [int(item) for item in args.index.split(', ')]
+    indexes = args.index
     task = 'train'
+
+    if indexes != []:
+        indexes = [int(item) for item in indexes.split(', ')]
+    else:
+        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N)
+
+
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
 
     if model_type == 'Net':
