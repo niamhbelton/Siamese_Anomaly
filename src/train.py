@@ -55,6 +55,12 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
 
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N):
+    indexes = []
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
+    n_norm = len(train_dataset.targets[train_dataset.targets])
+
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
