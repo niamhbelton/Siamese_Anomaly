@@ -3,6 +3,8 @@ import torch.nn as nn
 from torchvision import models
 import torch.nn.functional as F
 
+
+#lenet without last layers and average pooling
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -15,12 +17,45 @@ class Net(nn.Module):
                 padding=2,
             ),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2),
+          #  nn.MaxPool2d(kernel_size=2),
+            nn.AvgPool2d(kernel_size=2)
         )
         self.conv2 = nn.Sequential(
             nn.Conv2d(16, 32, 5, 1, 2),
             nn.ReLU(),
-            nn.MaxPool2d(2),
+           # nn.MaxPool2d(2),
+           nn.AvgPool2d(kernel_size=2)
+        )
+        # fully connected layer, output 10 classes
+  #      self.out = nn.Linear(32 * 7 * 7, 1)
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim =0)
+        x = torch.unsqueeze(x, dim =0)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(x.size(0), -1)
+        return x #output
+
+#lenet without last layers and max pooling
+class Net_Max(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(16, 32, 5, 1, 2),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
         )
         # fully connected layer, output 10 classes
   #      self.out = nn.Linear(32 * 7 * 7, 1)
@@ -34,7 +69,7 @@ class Net(nn.Module):
         return x #output
 
 
-
+#bringing the model back, decreasing the complexity
 class Net_simp(nn.Module):
     def __init__(self):
         super(Net_simp, self).__init__()
@@ -58,7 +93,7 @@ class Net_simp(nn.Module):
         x = x.view(x.size(0), -1)
         return x #output
 
-
+#more complicated version
 class MNIST_LeNet(nn.Module):
 
     def __init__(self):
@@ -80,38 +115,28 @@ class MNIST_LeNet(nn.Module):
         x = x.view(x.size(0), -1)
         return x
 
-
+#including a linear layer
 class LeNet5(nn.Module):
 
     def __init__(self):
         super(LeNet5, self).__init__()
 
-        self.feature_extractor = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5, stride=1),
-            nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1),
-            nn.Tanh(),
-            nn.AvgPool2d(kernel_size=2),
-        #    nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
-        #    nn.Tanh()
-        )
-
-        self.classifier = nn.Sequential(
-            nn.Linear(in_features=120, out_features=84),
-        #    nn.Tanh(),
-        #    nn.Linear(in_features=84, out_features=n_classes),
-        )
-
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5, stride=1)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1)
+        self.pool = nn.AvgPool2d(kernel_size=2)
+        self.classifier = nn.Linear(in_features=256, out_features=84)
+        self.act = nn.Tanh()
 
     def forward(self, x):
         x = torch.unsqueeze(x, dim =0)
         x = torch.unsqueeze(x, dim =0)
-        x = self.feature_extractor(x)
+        x= self.act(self.conv1(x))
+        x = self.pool(x)
+        x = self.act(self.conv2(x))
+        x = self.pool(x)
         x = torch.flatten(x, 1)
-        logits = self.classifier(x)
-        #probs = F.softmax(logits, dim=1)
-        return logits
+     #   x= self.classifier(x)
+        return x
 
 
 class cifar_lenet(nn.Module):
