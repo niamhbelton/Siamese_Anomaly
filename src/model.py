@@ -93,8 +93,8 @@ class LeNet5(nn.Module):
             nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1),
             nn.Tanh(),
             nn.AvgPool2d(kernel_size=2),
-            nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
-            nn.Tanh()
+        #    nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
+        #    nn.Tanh()
         )
 
         self.classifier = nn.Sequential(
@@ -105,6 +105,8 @@ class LeNet5(nn.Module):
 
 
     def forward(self, x):
+        x = torch.unsqueeze(x, dim =0)
+        x = torch.unsqueeze(x, dim =0)
         x = self.feature_extractor(x)
         x = torch.flatten(x, 1)
         logits = self.classifier(x)

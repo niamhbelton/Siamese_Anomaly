@@ -110,7 +110,7 @@ if __name__ == '__main__':
         model = cifar_lenet()
     elif model_type == 'MNIST_LeNet':
         model = MNIST_LeNet()
-    elif model == 'LeNet5':
+    elif model_type == 'LeNet5':
         model = LeNet5()
     else:
         model = Net_simp()
