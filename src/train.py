@@ -23,11 +23,13 @@ class ContrastiveLoss(torch.nn.Module):
 
 def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
+    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
         model.train()
+        loss_sum = 0
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
         np.random.shuffle(ind)
@@ -40,11 +42,13 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
             output1 = model.forward(img1.float())
             output2 = model.forward(img2.float())
             loss = criterion(output1,output2,labels)
-
+            loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+
+        print("Epoch: {}, Loss: {}".format(epoch, loss_sum))
 
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
@@ -117,6 +121,8 @@ if __name__ == '__main__':
 
 
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+
+    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    #            optimizer, patience=3, factor=.1, threshold=1e-4, verbose=True)
     criterion = ContrastiveLoss()
     train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
