@@ -23,9 +23,16 @@ class ContrastiveLoss(torch.nn.Module):
 
 def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
+    model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
+    best_val_auc = 0
+    early_stop_iter = 0
+    max_iter = 2
+    stop_training =False
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
         model.train()
@@ -48,15 +55,27 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
             loss.backward()
             optimizer.step()
 
-        print("Epoch: {}, Loss: {}".format(epoch, loss_sum))
+        print("Epoch: {}, Loss: {}".format(epoch+1, loss_sum))
 
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
-        evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path)
+        val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        scheduler.step(val_loss)
+        if val_auc > best_val_auc:
+          best_val_auc = val_auc
+          early_stop_iter = 0
+          model_name = model_name + '_epoch_' + str(epoch+1)
+          torch.save(model, './outputs/' + model_name)
+        else:
+          early_stop_iter = early_stop_iter +1
+          if early_stop_iter == max_iter:
+            stop_training = True
+
+        if stop_training:
+          break
 
 
 
-    torch.save(model, './outputs/' + model_name)
     print("Finished Training")
 
 
@@ -120,9 +139,7 @@ if __name__ == '__main__':
         model = Net_simp()
 
 
-    model.cuda()
 
-    #scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    #            optimizer, patience=3, factor=.1, threshold=1e-4, verbose=True)
+
     criterion = ContrastiveLoss()
     train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
