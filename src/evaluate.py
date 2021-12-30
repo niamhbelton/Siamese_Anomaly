@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop
 import os
 import numpy as np
 import pandas as pd

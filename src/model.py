@@ -57,6 +57,13 @@ class LeNet_Max(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
+        self.classifier = nn.Linear(1568, 1024)
+
+       # self.classifier = nn.Linear(1568, 512)
+
+     #   self.classifier = nn.Linear(1568, 64)
+
+      #  self.classifier = nn.Linear(1568, 2048)
 
 
     def forward(self, x):
@@ -65,6 +72,7 @@ class LeNet_Max(nn.Module):
         x = self.conv1(x)
         x = self.conv2(x)
         x = x.view(x.size(0), -1)
+        x = self.classifier(x)
         return x #output
 
 
@@ -101,8 +109,7 @@ class LeNet_Tan(nn.Module):
 class LeNet_Leaky(nn.Module):
     def __init__(self):
         super(LeNet_Leaky, self).__init__()
-        self.conv1 =
-            nn.Conv2d(
+        self.conv1 = nn.Conv2d(
                 in_channels=1,
                 out_channels=16,
                 kernel_size=5,
@@ -121,6 +128,71 @@ class LeNet_Leaky(nn.Module):
         x = x.view(x.size(0), -1)
         return x #output
 
+
+class LeNet_Norm(nn.Module):
+    def __init__(self):
+        super(LeNet_Norm, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            ),
+            nn.BatchNorm2d(16, eps=1e-04, affine=False),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(16, 32, 5, 1, 2),
+            nn.BatchNorm2d(32, eps=1e-04, affine=False),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim =0)
+        x = torch.unsqueeze(x, dim =0)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(x.size(0), -1)
+        return x #output
+
+
+
+class LeNet_Drop(nn.Module):
+    def __init__(self):
+        super(LeNet_Drop, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            ),
+        #    nn.BatchNorm2d(16, eps=1e-04, affine=False),
+            nn.ReLU(),
+            nn.Dropout(p=0.4),
+            nn.MaxPool2d(kernel_size=2)
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(16, 32, 5, 1, 2),
+            #nn.BatchNorm2d(32, eps=1e-04, affine=False),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim =0)
+        x = torch.unsqueeze(x, dim =0)
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = x.view(x.size(0), -1)
+        return x #output
 
 
 
@@ -196,3 +268,43 @@ class cifar_lenet(nn.Module):
         x = x.view(x.size(0), -1)
       #  x = self.fc1(x)
         return x
+
+
+
+class cifar_lenet(nn.Module):
+  def __init__(self):
+      super(cifar_lenet, self).__init__()
+
+      self.conv1 = nn.Sequential(
+          nn.Conv2d(
+              in_channels=3,
+              out_channels=16,
+              kernel_size=5,
+              stride=1,
+              padding=2,
+          ),
+          nn.ReLU(),
+          nn.MaxPool2d(kernel_size=2)
+      )
+      self.conv2 = nn.Sequential(
+          nn.Conv2d(16, 32, 5, 1, 2),
+          nn.ReLU(),
+          nn.MaxPool2d(2)
+      )
+      self.classifier = nn.Linear(1568, 1024)
+
+      # self.classifier = nn.Linear(1568, 512)
+
+    #   self.classifier = nn.Linear(1568, 64)
+
+    #  self.classifier = nn.Linear(1568, 2048)
+
+
+  def forward(self, x):
+      x = torch.unsqueeze(x, dim =0)
+      x = torch.unsqueeze(x, dim =0)
+      x = self.conv1(x)
+      x = self.conv2(x)
+      x = x.view(x.size(0), -1)
+      x = self.classifier(x)
+      return x #output

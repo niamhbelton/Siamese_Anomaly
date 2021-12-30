@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop
 import os
 import numpy as np
 import pandas as pd
@@ -96,7 +96,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
 #    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'Net_Max'], required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky, cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
@@ -131,15 +131,18 @@ if __name__ == '__main__':
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
 
-    if model_type == 'LeNet_Avg'
+    if model_type == 'LeNet_Avg':
         model = LeNet_Avg()
-    elif model_type == 'LeNet_Max'
+    elif model_type == 'LeNet_Max':
         model = LeNet_Max()
-    elif model_type == 'LeNet_Tan'
+    elif model_type == 'LeNet_Tan':
         model = LeNet_Tan()
-    elif model_type == 'LeNet_Leaky'
-        MODEL = LeNet_Leaky
-
+    elif model_type == 'LeNet_Leaky':
+        model = LeNet_Leaky()
+    elif model_type == 'LeNet_Norm':
+        model = LeNet_Norm()
+    elif model_type == 'LeNet_Drop':
+        model = LeNet_Drop()
 #    if model_type == 'Net':
 #        model = Net()
 #    elif model_type == 'cifar_lenet':
