@@ -81,10 +81,11 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
 
-def create_reference(dataset_name, normal_class, task, data_path, download_data, N):
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
+    random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
 
     return ind[samp]
@@ -99,6 +100,7 @@ def parse_arguments():
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
+    parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -114,6 +116,7 @@ if __name__ == '__main__':
     dataset_name = args.dataset
     normal_class = args.normal_class
     N = args.num_ref
+    seed = args.seed
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
@@ -123,7 +126,7 @@ if __name__ == '__main__':
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N)
+        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed)
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
