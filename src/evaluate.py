@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import Net, Net_simp, cifar_lenet, MNIST_LeNet, LeNet5
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop
 import os
 import numpy as np
 import pandas as pd
@@ -10,7 +10,7 @@ from sklearn import metrics
 from datasets.main import load_dataset
 
 
-def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path):
+def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
     model.cuda()
     model.eval()
@@ -39,6 +39,8 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     lst=[]
     labels=[]
     #loop through images in the dataloader
+
+    loss_sum =0
     for i, data in enumerate(loader):
 
         image = data[0][0]
@@ -50,9 +52,13 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
+            loss_sum += criterion(out, ref_images['images{}'.format(j)],data[2].item())
         means.append(sum / len(indexes))
         del image
         del out
+
+
+
 
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
     cols = ['label','mean']
@@ -67,6 +73,8 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
     auc = metrics.auc(fpr, tpr)
     print('AUC is {}'.format(auc))
+
+    return auc, loss_sum
 
 
 def softmax(x, axis=None):
