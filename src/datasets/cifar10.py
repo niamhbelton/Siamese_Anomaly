@@ -105,7 +105,7 @@ class CIFAR10(data.Dataset):
 
           self.targets = np.array(self.targets)
           self.targets[self.targets != normal_class] = -1
-          self.targets[self.targets != normal_class] = -2
+          self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0
           self.targets[self.targets == -1] = 1
         self._load_meta()
