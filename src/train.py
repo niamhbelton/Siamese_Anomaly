@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import Net, Net_simp, cifar_lenet, MNIST_LeNet, LeNet5, Net_Max
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky
 import os
 import numpy as np
 import pandas as pd
@@ -94,7 +94,8 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'Net_Max'], required=True)
+#    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'Net_Max'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky, cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
@@ -127,18 +128,27 @@ if __name__ == '__main__':
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
 
-    if model_type == 'Net':
-        model = Net()
-    elif model_type == 'cifar_lenet':
-        model = cifar_lenet()
-    elif model_type == 'MNIST_LeNet':
-        model = MNIST_LeNet()
-    elif model_type == 'LeNet5':
-        model = LeNet5()
-    elif model_type == 'Net_Max':
-        model = Net_Max()
-    else:
-        model = Net_simp()
+    if model_type == 'LeNet_Avg'
+        model = LeNet_Avg()
+    elif model_type == 'LeNet_Max'
+        model = LeNet_Max()
+    elif model_type == 'LeNet_Tan'
+        model = LeNet_Tan()
+    elif model_type == 'LeNet_Leaky'
+        MODEL = LeNet_Leaky
+
+#    if model_type == 'Net':
+#        model = Net()
+#    elif model_type == 'cifar_lenet':
+#        model = cifar_lenet()
+#    elif model_type == 'MNIST_LeNet':
+#        model = MNIST_LeNet()
+#    elif model_type == 'LeNet5':
+#        model = LeNet5()
+#    elif model_type == 'Net_Max':
+#        model = Net_Max()
+#    else:
+#        model = Net_simp()
 
 
 

@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import Net, Net_simp, cifar_lenet, MNIST_LeNet, LeNet5, Net_Max
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky
 import os
 import numpy as np
 import pandas as pd
