@@ -36,7 +36,7 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
         img1, img2, label = ref_dataset.__getitem__(i)
         if label == 0:
           comp.append(i)
-          d['compare{}'.format(i)],_,_ = ref_dataset.__getitem__(i)
+          d['compare{}'.format(i)] = img1 #ref_dataset.__getitem__(i)
           ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
           outs['outputs{}'.format(i)] =[]
 

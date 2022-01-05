@@ -143,7 +143,7 @@ class MNIST(data.Dataset):
 
         return data, targets
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int, seed = 0):
         """
         Args:
             index (int): Index
@@ -156,9 +156,13 @@ class MNIST(data.Dataset):
 
 
         if self.task == 'train':
-            ind = np.random.randint(len(self.indexes) + 1) -1
+            np.random.seed(seed)
+            ind = np.random.randint(len(self.indexes) )
+            c=1
             while (ind == index):
-                ind = np.random.randint(len(self.indexes) + 1) -1
+                np.random.seed(seed * c)
+                ind = np.random.randint(len(self.indexes) )
+                c=c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
 
@@ -167,6 +171,9 @@ class MNIST(data.Dataset):
             img2 = torch.Tensor([1])
             label = target
 
+        print(seed)
+        print('index is {}'.format(index))
+        print('ind is {}'.format(ind))
 
         return img, img2, label
 

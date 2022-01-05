@@ -43,7 +43,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for index in ind:
-            img1, img2, labels = train_dataset.__getitem__(index)
+            seed = (epoch+1) * (index+1)
+            img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
             img1 = img1.to(device)
             img2 = img2.to(device)
