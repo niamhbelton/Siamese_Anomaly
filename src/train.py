@@ -18,6 +18,8 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
+    #    print(label)
+       # print('ed is {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
@@ -31,7 +33,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         os.makedirs('outputs')
     best_val_auc = 0
     early_stop_iter = 0
-    max_iter = 2
+    max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
@@ -60,6 +62,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
         val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
           best_val_auc = val_auc
@@ -81,14 +85,22 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
 
-def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed, few_shot):
     indexes = []
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
-
-    return ind[samp]
+    final_indexes = ind[samp]
+    if few_shot == True:
+      for i in range(0,10):
+          if i != normal_class:
+            anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
+            random.seed(seed)
+            s = random.sample(range(0, len(anom_ind)), 10)
+            final_indexes = np.append(final_indexes, anom_ind[s])
+      print(final_indexes)
+    return final_indexes
 
 
 
@@ -101,6 +113,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--few_shot', default = False)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -117,6 +130,7 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
+    few_shot = args.few_shot
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
@@ -126,7 +140,7 @@ if __name__ == '__main__':
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed)
+        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed, few_shot)
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
