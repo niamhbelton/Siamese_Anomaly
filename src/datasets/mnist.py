@@ -132,7 +132,7 @@ class MNIST(data.Dataset):
             elif self.task == 'validate':
                 lst = list(range(0,len(data) ))
                 ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-                randomlist = random.sample(range(0, len(ind)), 10000)
+                randomlist = random.sample(range(0, len(ind)), 5000)
                 data = data[randomlist]
                 targets = targets[randomlist]
         else:
@@ -171,9 +171,9 @@ class MNIST(data.Dataset):
             img2 = torch.Tensor([1])
             label = target
 
-        print(seed)
-        print('index is {}'.format(index))
-        print('ind is {}'.format(ind))
+    #    print(seed)
+    #    print('index is {}'.format(index))
+    #    print('ind is {}'.format(ind))
 
         return img, img2, label
 
