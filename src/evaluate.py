@@ -30,7 +30,6 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     ref_images={} #dictionary for feature vectors of reference set
     ind = list(range(0, len(indexes)))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
-
     for i in ind:
         comp=[]
         img1, img2, label = ref_dataset.__getitem__(i)
@@ -61,9 +60,6 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
         means.append(sum / len(indexes))
         del image
         del out
-
-
-
 
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
     cols = ['label','mean']

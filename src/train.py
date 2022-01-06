@@ -82,6 +82,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
     print("Finished Training")
+    print("Best validation AUC was {}".format(best_val_auc))
 
 
 
@@ -100,7 +101,6 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
             random.seed(seed)
             s = random.sample(range(0, len(anom_ind)), 10)
             final_indexes = np.append(final_indexes, anom_ind[s])
-      print(final_indexes)
     return final_indexes
 
 
