@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
 import os
 import numpy as np
 import pandas as pd
@@ -18,6 +18,8 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
+    #    print(label)
+       # print('ed is {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
@@ -31,7 +33,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         os.makedirs('outputs')
     best_val_auc = 0
     early_stop_iter = 0
-    max_iter = 2
+    max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
@@ -41,7 +43,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for index in ind:
-            img1, img2, labels = train_dataset.__getitem__(index)
+            seed = (epoch+1) * (index+1)
+            img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
             img1 = img1.to(device)
             img2 = img2.to(device)
@@ -60,6 +63,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
         val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
           best_val_auc = val_auc
@@ -77,18 +82,26 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
     print("Finished Training")
+    print("Best validation AUC was {}".format(best_val_auc))
 
 
 
 
-def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed, few_shot):
     indexes = []
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
-
-    return ind[samp]
+    final_indexes = ind[samp]
+    if few_shot == True:
+      for i in range(0,10):
+          if i != normal_class:
+            anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
+            random.seed(seed)
+            s = random.sample(range(0, len(anom_ind)), 10)
+            final_indexes = np.append(final_indexes, anom_ind[s])
+    return final_indexes
 
 
 
@@ -101,6 +114,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--few_shot', default = False)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -117,6 +131,7 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
+    few_shot = args.few_shot
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
@@ -126,7 +141,7 @@ if __name__ == '__main__':
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed)
+        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed, few_shot)
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
@@ -145,8 +160,8 @@ if __name__ == '__main__':
         model = LeNet_Drop()
 #    if model_type == 'Net':
 #        model = Net()
-#    elif model_type == 'cifar_lenet':
-#        model = cifar_lenet()
+    elif model_type == 'cifar_lenet':
+        model = cifar_lenet()
 #    elif model_type == 'MNIST_LeNet':
 #        model = MNIST_LeNet()
 #    elif model_type == 'LeNet5':

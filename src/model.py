@@ -291,7 +291,8 @@ class cifar_lenet(nn.Module):
           nn.ReLU(),
           nn.MaxPool2d(2)
       )
-      self.classifier = nn.Linear(1568, 1024)
+      self.classifier = nn.Linear(2048, 1024)
+
 
       # self.classifier = nn.Linear(1568, 512)
 
@@ -301,7 +302,6 @@ class cifar_lenet(nn.Module):
 
 
   def forward(self, x):
-      x = torch.unsqueeze(x, dim =0)
       x = torch.unsqueeze(x, dim =0)
       x = self.conv1(x)
       x = self.conv2(x)

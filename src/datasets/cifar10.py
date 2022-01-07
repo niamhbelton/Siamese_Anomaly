@@ -90,24 +90,34 @@ class CIFAR10(data.Dataset):
       #  self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
 
 
+        if self.indexes != []:
+          if self.task == 'train':
+              self.data = np.array(self.data)[self.indexes]
+           #   self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
+              new_targets=[]
+              for i in indexes:
+                new_targets.append(self.targets[i])
+              self.targets = new_targets
 
-        if self.task == 'train':
-            self.data = np.array(self.data)[self.indexes]
-            self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
+          elif self.task == 'validate':
+              lst = list(range(0,len(self.data) ))
+              ind = [x for i,x in enumerate(lst) if i not in self.indexes]
+              print('ind is {}'.format(ind))
+              randomlist = random.sample(range(0, len(ind)), 100)
+              print('actual index {}'.format(randomlist))
+              self.data = self.data[randomlist]
+            #  self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
+              new_targets=[]
+              for i in randomlist:
+                new_targets.append(self.targets[i])
+              self.targets = new_targets
 
 
-        elif self.task == 'validate':
-            lst = list(range(0,len(self.data) ))
-            ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-            randomlist = random.sample(range(0, len(ind)), 10000)
-            self.data = self.data[randomlist]
-            self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
-
-        self.targets = np.array(self.targets)
-        self.targets[self.targets != normal_class] = -1
-        self.targets[self.targets != normal_class] = -2
-        self.targets[self.targets == -2] = 0
-        self.targets[self.targets == -1] = 1
+          self.targets = np.array(self.targets)
+          self.targets[self.targets != normal_class] = -1
+          self.targets[self.targets == normal_class] = -2
+          self.targets[self.targets == -2] = 0
+          self.targets[self.targets == -1] = 1
         self._load_meta()
 
 
@@ -128,7 +138,7 @@ class CIFAR10(data.Dataset):
 
 
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int, seed = 1):
         """
         Args:
             index (int): Index
@@ -141,16 +151,33 @@ class CIFAR10(data.Dataset):
 
 
         if self.task == 'train':
-            ind = np.random.randint(len(self.indexes) + 1) -1
+            np.random.seed(seed)
+            ind = np.random.randint(len(self.indexes.tolist()) )
+            c=1
             while (ind == index):
-                ind = np.random.randint(len(self.indexes) + 1) -1
+                np.random.seed(seed * c)
+                ind = np.random.randint(len(self.indexes.tolist()) )
+                c = c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
+         #   label = torch.FloatTensor([0])
 
-            label = torch.FloatTensor([0])
+           # label = torch.Tensor([target2])
+            if target == target2:
+              label = torch.Tensor([0])
+            else:
+              label = torch.Tensor([1])
+         #   print('the ref pic {}'.format(index))
+         #   print('the randomly selected ref {}'.format(ind))
         else:
             img2 = torch.Tensor([1])
             label = target
+
+     #   print(index)
+      #  print(ind)
+       # print('target 1 is {}'.format(target))
+        #print('target2 is {}'.format(target2))
+        #print(label)
 
         return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
 

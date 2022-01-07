@@ -132,7 +132,7 @@ class MNIST(data.Dataset):
             elif self.task == 'validate':
                 lst = list(range(0,len(data) ))
                 ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-                randomlist = random.sample(range(0, len(ind)), 10000)
+                randomlist = random.sample(range(0, len(ind)), 1000)
                 data = data[randomlist]
                 targets = targets[randomlist]
         else:
@@ -143,7 +143,7 @@ class MNIST(data.Dataset):
 
         return data, targets
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int, seed = 1):
         """
         Args:
             index (int): Index
@@ -156,9 +156,17 @@ class MNIST(data.Dataset):
 
 
         if self.task == 'train':
-            ind = np.random.randint(len(self.indexes) + 1) -1
+            np.random.seed(seed)
+            ind = np.random.randint(len(self.indexes) )
+            c=1
+           # print('in item 2{}'.format(index))
+           # print('in item {}'.format(ind))
             while (ind == index):
-                ind = np.random.randint(len(self.indexes) + 1) -1
+                np.random.seed(seed * c)
+             #   print('c {}'.format(seed * c))
+                ind = np.random.randint(len(self.indexes) )
+              #  print('in the loop {}'.format(ind))
+                c=c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
 
@@ -167,6 +175,9 @@ class MNIST(data.Dataset):
             img2 = torch.Tensor([1])
             label = target
 
+    #    print(seed)
+    #    print('index is {}'.format(index))
+    #    print('ind is {}'.format(ind))
 
         return img, img2, label
 

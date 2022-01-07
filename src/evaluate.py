@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
 import os
 import numpy as np
 import pandas as pd
@@ -31,9 +31,13 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     ind = list(range(0, len(indexes)))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
-        d['compare{}'.format(i)],_,_ = ref_dataset.__getitem__(i)
-        ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
-        outs['outputs{}'.format(i)] =[]
+        comp=[]
+        img1, img2, label = ref_dataset.__getitem__(i)
+        if label == 0:
+          comp.append(i)
+          d['compare{}'.format(i)] = img1 #ref_dataset.__getitem__(i)
+          ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
+          outs['outputs{}'.format(i)] =[]
 
     means = []
     lst=[]
@@ -48,11 +52,12 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     #    lst.append(img[2].item())
         sum =0
         out = model.forward(image.cuda().float())
-        for j in range(0, len(indexes)):
+        for j in comp:
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
-            loss_sum += criterion(out, ref_images['images{}'.format(j)],data[2].item())
+            loss_sum += criterion(out, ref_images['images{}'.format(j)], data[2].item())
+
         means.append(sum / len(indexes))
         del image
         del out
@@ -62,7 +67,7 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
 
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
     cols = ['label','mean']
-    for i in range(0, len(indexes)):
+    for i in comp:
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
 
