@@ -138,7 +138,7 @@ class CIFAR10(data.Dataset):
 
 
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int, seed = 1):
         """
         Args:
             index (int): Index
@@ -151,9 +151,13 @@ class CIFAR10(data.Dataset):
 
 
         if self.task == 'train':
+            np.random.seed(seed)
             ind = np.random.randint(len(self.indexes.tolist()) )
+            c=1
             while (ind == index):
+                np.random.seed(seed * c)
                 ind = np.random.randint(len(self.indexes.tolist()) )
+                c = c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
          #   label = torch.FloatTensor([0])
