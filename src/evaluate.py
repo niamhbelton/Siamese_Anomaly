@@ -57,9 +57,13 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
             loss_sum += criterion(out, ref_images['images{}'.format(j)], data[2].item())
+
         means.append(sum / len(indexes))
         del image
         del out
+
+
+
 
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
     cols = ['label','mean']

@@ -293,6 +293,7 @@ class cifar_lenet(nn.Module):
       )
       self.classifier = nn.Linear(2048, 1024)
 
+
       # self.classifier = nn.Linear(1568, 512)
 
     #   self.classifier = nn.Linear(1568, 64)
