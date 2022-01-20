@@ -60,12 +60,8 @@ class CIFAR10(data.Dataset):
         self.normal_class = normal_class
         self.download_data = download_data
 
-
-
         if self.download_data:
             self.download()
-
-
 
         if (self.task == 'train') | (self.task == 'validate'):
             downloaded_list = self.train_list
@@ -118,15 +114,6 @@ class CIFAR10(data.Dataset):
           self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0
           self.targets[self.targets == -1] = 1
-        self._load_meta()
-
-
-    def _load_meta(self) -> None:
-        path = os.path.join(self.data_path, self.base_folder, self.meta['filename'])
-        with open(path, 'rb') as infile:
-            data = pickle.load(infile, encoding='latin1')
-            self.classes = data[self.meta['key']]
-        self.class_to_idx = {_class: i for i, _class in enumerate(self.classes)}
 
 
     def download(self) -> None:

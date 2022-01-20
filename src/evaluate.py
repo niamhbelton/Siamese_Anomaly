@@ -8,7 +8,7 @@ import argparse
 from sklearn.metrics import roc_curve
 from sklearn import metrics
 from datasets.main import load_dataset
-
+import random
 
 def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
@@ -30,8 +30,9 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     ref_images={} #dictionary for feature vectors of reference set
     ind = list(range(0, len(indexes)))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
+    comp=[]
     for i in ind:
-        comp=[]
+
         img1, img2, label = ref_dataset.__getitem__(i)
         if label == 0:
           comp.append(i)
@@ -79,6 +80,9 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     auc = metrics.auc(fpr, tpr)
     print('AUC is {}'.format(auc))
 
+    print('anomalies mean {}'.format(np.mean(df.loc[df['label']==1]['mean'])))
+    print('normals mean {}'.format(np.mean(df.loc[df['label']==0]['mean'])))
+
     return auc, loss_sum
 
 
@@ -87,12 +91,46 @@ def softmax(x, axis=None):
     y = np.exp(x)
     return y / y.sum(axis=axis, keepdims=True)
 
+
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed, few_shot):
+    indexes = []
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
+    ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
+    random.seed(seed)
+    samp = random.sample(range(0, len(ind)), N)
+    final_indexes = ind[samp]
+    if few_shot == True:
+      for i in range(0,10):
+          if i != normal_class:
+            anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
+            random.seed(seed)
+            s = random.sample(range(0, len(anom_ind)), 10)
+            final_indexes = np.append(final_indexes, anom_ind[s])
+    return final_indexes
+
+
+
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, margin=2.0):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label):
+        euclidean_distance = F.pairwise_distance(output1, output2)
+    #    print(label)
+       # print('ed is {}'.format(euclidean_distance))
+        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
+        return loss_contrastive
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--dataset_name', type=str, required=True)
     parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
+    parser.add_argument('-N', '--num_ref', type=int, default = 20)
+    parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('-o', '--output_name', type=str, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
@@ -105,18 +143,25 @@ if __name__ == '__main__':
 
     args = parse_arguments()
     model_name = args.model_name
-    dataset = args.dataset
+    dataset_name = args.dataset_name
     task = args.task
     normal_class = args.normal_class
+    N = args.num_ref
+    seed = args.seed
     output_name = args.output_name
     data_path = args.data_path
 
     #meta = pd.read_csv('metadata.csv')
     #if args.index != []:
-    indexes = [int(item) for item in args.index.split(', ')]
+  #  indexes = [int(item) for item in args.index.split(', ')]
     #else:
     #    indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
     #test_ind = list(meta.loc[meta['test']==1, 'id'])
     model = torch.load('./outputs/' + model_name)
-    evaluate(model, task, dataset, normal_class, output_name, indexes, data_path )
+    few_shot =False
+    download_data=True
+    indexes = create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed, few_shot)
+
+    criterion = ContrastiveLoss()
+    evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion )

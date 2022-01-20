@@ -64,13 +64,14 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         task = 'validate'
         val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
         train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        print('the train AUC is {}'.format(train_auc))
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
           best_val_auc = val_auc
           early_stop_iter = 0
-          model_name = model_name + '_epoch_' + str(epoch+1)
-          torch.save(model, './outputs/' + model_name)
+          mod_name = model_name + '_epoch_' + str(epoch+1)
+          torch.save(model, './outputs/' + mod_name)
         else:
           early_stop_iter = early_stop_iter +1
           if early_stop_iter == max_iter:
@@ -94,7 +95,7 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
-    if few_shot == True:
+    if few_shot:
       for i in range(0,10):
           if i != normal_class:
             anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
