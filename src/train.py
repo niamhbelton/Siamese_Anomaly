@@ -31,9 +31,13 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
+    if not os.path.exists('validate'):
+        os.makedirs('./outputs/validate')
+    if not os.path.exists('train'):
+        os.makedirs('./outputs/train')
     best_val_auc = 0
     early_stop_iter = 0
-    max_iter = 5
+    max_iter = 15
     stop_training =False
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
@@ -65,6 +69,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
         train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
         print('the train AUC is {}'.format(train_auc))
+        print('validation loss is {}'.format(val_loss))
+        print('train loss is {}'.format(train_loss))
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:

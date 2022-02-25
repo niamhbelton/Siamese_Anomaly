@@ -10,7 +10,7 @@ from sklearn import metrics
 from datasets.main import load_dataset
 import random
 
-def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
+def evaluate(ref_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, images):
 
     model.cuda()
     model.eval()
@@ -18,57 +18,71 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
 
     #ref_dataset = Dataset(data_path, 'sagittal')
     #loader = torch.utils.data.DataLoader(ref_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
-
-    ref_dataset = load_dataset(dataset_name, indexes, normal_class, 'train', data_path, download_data=True)
+    print('here')
+   # ref_dataset = load_dataset(dataset_name, indexes, normal_class, 'train', data_path, download_data=True)
    # if task == 'test':
     #    test = load_dataset(dataset_name, indexes, normal_class, 1, data_path, download_data=False)
   #  else: #evaluate on validation data
-    test = load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data=False)
+    test = load_dataset(dataset_name, indexes, normal_class, 'alt', data_path, download_data=False)
     loader = torch.utils.data.DataLoader(test, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
     d={} #a dictionary of the reference images
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
     ref_images={} #dictionary for feature vectors of reference set
-    ind = list(range(0, len(indexes)))
+    ind = list(range(0, 100))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
-    comp=[]
     for i in ind:
 
-        img1, img2, label = ref_dataset.__getitem__(i)
-        if label == 0:
-          comp.append(i)
-          d['compare{}'.format(i)] = img1 #ref_dataset.__getitem__(i)
-          ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
-          outs['outputs{}'.format(i)] =[]
+      #  img1, img2, label = ref_dataset.__getitem__(i)
+      #  d['compare{}'.format(i)] = img1 #ref_dataset.__getitem__(i)
+      #  ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
+        outs['outputs{}'.format(i)] =[]
+
+        ref_images['images{}'.format(i)] = images[i]
+
+
+
 
     means = []
     lst=[]
     labels=[]
+    ids=[]
+    ind_test = [8, 20, 30, 40, 50, 60, 70, 133, 143, 153, 163, 173, 183 ]
     #loop through images in the dataloader
 
     loss_sum =0
-    for i, data in enumerate(loader):
 
-        image = data[0][0]
+ # for i, data in enumerate(loader):
+    for i in range(0,13):
+        data = test.__getitem__(i)
+       # image = data[0][0]
+        image = data[0]
+      #  print('here the label is {}'.format(data[2].item()))
+
         labels.append(data[2].item())
+     #   if i == 0:
+      #    labels.append(0)
+      #  elif i == 1:
+       #   labels.append(1)
     #    lst.append(img[2].item())
-        sum =0
+        sums =0
         out = model.forward(image.cuda().float())
-        for j in comp:
+        for j in ind:
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
-            sum += euclidean_distance.detach().cpu().numpy()[0]
-            loss_sum += criterion(out, ref_images['images{}'.format(j)], data[2].item())
+            sums += euclidean_distance.detach().cpu().numpy()[0]
+            loss_sum += criterion(out, ref_images['images{}'.format(j)], data[2].item(), 101)
 
-        means.append(sum / len(indexes))
+        means.append(sums / len(ind))
+        ids.append(ind_test[i])
         del image
         del out
 
 
 
 
-    df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
-    cols = ['label','mean']
-    for i in comp:
+    df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means), pd.DataFrame(ids)], axis =1)
+    cols = ['label','mean', 'id']
+    for i in ind:
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
 
@@ -108,19 +122,6 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
             final_indexes = np.append(final_indexes, anom_ind[s])
     return final_indexes
 
-
-
-class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, margin=2.0):
-        super(ContrastiveLoss, self).__init__()
-        self.margin = margin
-
-    def forward(self, output1, output2, label):
-        euclidean_distance = F.pairwise_distance(output1, output2)
-    #    print(label)
-       # print('ed is {}'.format(euclidean_distance))
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive
 
 
 def parse_arguments():

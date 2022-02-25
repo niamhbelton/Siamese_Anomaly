@@ -98,9 +98,7 @@ class CIFAR10(data.Dataset):
           elif self.task == 'validate':
               lst = list(range(0,len(self.data) ))
               ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-              print('ind is {}'.format(ind))
               randomlist = random.sample(range(0, len(ind)), 100)
-              print('actual index {}'.format(randomlist))
               self.data = self.data[randomlist]
             #  self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
               new_targets=[]
