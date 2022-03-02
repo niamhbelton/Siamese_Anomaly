@@ -63,8 +63,8 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
-        val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
-        train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss = evaluate(train_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        train_auc, train_loss = evaluate(train_dataset, model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:

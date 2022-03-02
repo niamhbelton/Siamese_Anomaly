@@ -26,7 +26,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 
 
-def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
+def evaluate(ref_set, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
     model.cuda()
     model.eval()
@@ -35,7 +35,7 @@ def evaluate(model, task, dataset_name, normal_class, output_name, indexes, data
     #ref_dataset = Dataset(data_path, 'sagittal')
     #loader = torch.utils.data.DataLoader(ref_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
 
-    ref_dataset = load_dataset(dataset_name, indexes, normal_class, 'train', data_path, download_data=True)
+    #ref_dataset = load_dataset(dataset_name, indexes, normal_class, 'train', data_path, download_data=True)
    # if task == 'test':
     #    test = load_dataset(dataset_name, indexes, normal_class, 1, data_path, download_data=False)
   #  else: #evaluate on validation data
