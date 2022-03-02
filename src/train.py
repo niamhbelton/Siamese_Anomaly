@@ -9,24 +9,25 @@ import torch.nn.functional as F
 import torch.optim as optim
 from evaluate import evaluate
 import random
-
+import pandas as pd
 
 class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, margin=2.0):
+    def __init__(self, margin=200.0):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, output2, label):
+    def forward(self, output1, output2, label, epoch):
         euclidean_distance = F.pairwise_distance(output1, output2)
     #    print(label)
-       # print('ed is {}'.format(euclidean_distance))
+    #    if epoch > 100:
+     #      print('ed is {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
+def train(run_name, model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=1e-6, weight_decay=0.1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -35,23 +36,36 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
     early_stop_iter = 0
     max_iter = 5
     stop_training =False
-    ind = list(range(0, len(indexes)))
+    epoch_loss = []
+    aucs = []
+    ind = list(range(0, 100))
     for epoch in range(epochs):
+
+
         model.train()
         loss_sum = 0
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
         np.random.shuffle(ind)
+        images= []
         for index in ind:
+         #   print(index)
             seed = (epoch+1) * (index+1)
+
             img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
+       #     if epoch > 100:
+        #     print(index)
+         #    print(labels)
             img1 = img1.to(device)
             img2 = img2.to(device)
             labels = labels.to(device)
             output1 = model.forward(img1.float())
+            images.append(output1)
             output2 = model.forward(img2.float())
-            loss = criterion(output1,output2,labels)
+            loss = criterion(output1,output2,labels,epoch)
+      #      if epoch > 100:
+       #       print(loss)
             loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
@@ -59,25 +73,34 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
             optimizer.step()
 
         print("Epoch: {}, Loss: {}".format(epoch+1, loss_sum))
+        epoch_loss.append(loss_sum)
 
-        output_name = 'output_epoch_' + str(epoch)
+        output_name = 'output_epoch_' + str(epoch) + '_' + run_name
         task = 'validate'
-        val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
-        train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+      #  val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        train_auc, train_loss = evaluate(train_dataset, model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion, images)
+    #    print('the train AUC is {}'.format(train_auc))
+        aucs.append(train_auc)
 
-        scheduler.step(val_loss)
-        if val_auc > best_val_auc:
-          best_val_auc = val_auc
-          early_stop_iter = 0
-          model_name = model_name + '_epoch_' + str(epoch+1)
-          torch.save(model, './outputs/' + model_name)
-        else:
-          early_stop_iter = early_stop_iter +1
-          if early_stop_iter == max_iter:
-            stop_training = True
+    if not os.path.exists('graph_data'):
+      os.makedirs('graph_data')
+    pd.concat([pd.DataFrame(epoch_loss), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/details_epoch_{}_{}'.format(epoch, run_name))
 
-        if stop_training:
-          break
+
+
+      #  scheduler.step(val_loss)
+      #  if val_auc > best_val_auc:
+      #    best_val_auc = val_auc
+      #    early_stop_iter = 0
+      #    mod_name = model_name + '_epoch_' + str(epoch+1)
+      #    torch.save(model, './outputs/' + mod_name)
+      #  else:
+      #    early_stop_iter = early_stop_iter +1
+      #    if early_stop_iter == max_iter:
+      #      stop_training = True
+
+       # if stop_training:
+        #  break
 
 
 
@@ -94,7 +117,7 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
-    if few_shot == True:
+    if few_shot:
       for i in range(0,10):
           if i != normal_class:
             anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
@@ -111,6 +134,7 @@ def parse_arguments():
 #    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'Net_Max'], required=True)
     parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--run_name', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
@@ -128,6 +152,7 @@ if __name__ == '__main__':
     model_name = args.model_name
     model_type = args.model_type
     dataset_name = args.dataset
+    run_name = args.run_name
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
@@ -175,4 +200,4 @@ if __name__ == '__main__':
 
 
     criterion = ContrastiveLoss()
-    train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
+    train(run_name, model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
