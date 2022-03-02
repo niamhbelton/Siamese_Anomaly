@@ -31,13 +31,10 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
-    if not os.path.exists('validate'):
-        os.makedirs('./outputs/validate')
-    if not os.path.exists('train'):
-        os.makedirs('./outputs/train')
     best_val_auc = 0
+    best_epoch = -1
     early_stop_iter = 0
-    max_iter = 15
+    max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
@@ -68,16 +65,14 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
         task = 'validate'
         val_auc, val_loss = evaluate(model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
         train_auc, train_loss = evaluate(model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
-        print('the train AUC is {}'.format(train_auc))
-        print('validation loss is {}'.format(val_loss))
-        print('train loss is {}'.format(train_loss))
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
           best_val_auc = val_auc
+          best_epoch = epoch+1
           early_stop_iter = 0
-          mod_name = model_name + '_epoch_' + str(epoch+1)
-          torch.save(model, './outputs/' + mod_name)
+          model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
+          torch.save(model, './outputs/' + model_name_temp)
         else:
           early_stop_iter = early_stop_iter +1
           if early_stop_iter == max_iter:
@@ -89,7 +84,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
     print("Finished Training")
-    print("Best validation AUC was {}".format(best_val_auc))
+    print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
 
 
 
@@ -101,7 +96,7 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
-    if few_shot:
+    if few_shot == True:
       for i in range(0,10):
           if i != normal_class:
             anom_ind = np.where(np.array(train_dataset.targets)==i)[0]

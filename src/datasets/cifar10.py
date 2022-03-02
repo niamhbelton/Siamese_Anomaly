@@ -63,7 +63,7 @@ class CIFAR10(data.Dataset):
         if self.download_data:
             self.download()
 
-        if (self.task == 'train') | (self.task == 'validate'):
+        if (self.task == 'train') | (self.task == 'validate') | (self.task == 'alt'):
             downloaded_list = self.train_list
         else:
             downloaded_list = self.test_list
@@ -87,24 +87,36 @@ class CIFAR10(data.Dataset):
 
 
         if self.indexes != []:
-          if self.task == 'train':
+          if (self.task == 'train') | (self.task == 'alt'):
               self.data = np.array(self.data)[self.indexes]
            #   self.targets = [x for i,x in enumerate(self.targets) if i in self.indexes]
               new_targets=[]
               for i in indexes:
                 new_targets.append(self.targets[i])
               self.targets = new_targets
+              if self.task == 'alt':
+                indexes =  [8, 20, 30, 40, 50, 60, 70, 133, 143, 153, 163, 173, 183 ]
+                self.data = self.data[indexes]
+                new_targets=[]
+                for i in indexes:
+                  new_targets.append(self.targets[i])
+                self.targets = new_targets
 
           elif self.task == 'validate':
               lst = list(range(0,len(self.data) ))
               ind = [x for i,x in enumerate(lst) if i not in self.indexes]
+              print('ind is {}'.format(ind))
               randomlist = random.sample(range(0, len(ind)), 100)
+              print('actual index {}'.format(randomlist))
               self.data = self.data[randomlist]
             #  self.targets = [x for i,x in enumerate(self.targets) if i in randomlist]
               new_targets=[]
               for i in randomlist:
                 new_targets.append(self.targets[i])
               self.targets = new_targets
+
+
+
 
 
           self.targets = np.array(self.targets)
@@ -144,25 +156,61 @@ class CIFAR10(data.Dataset):
                 ind = np.random.randint(len(self.indexes.tolist()) )
                 c = c+1
 
+            ind = [8, 20, 30, 40, 50, 60, 70, 133, 143, 153, 163, 173, 183 ]
+            blah = np.random.randint(13)
+            ind = ind[blah]
             img2, target2 = self.data[ind], int(self.targets[ind])
          #   label = torch.FloatTensor([0])
 
            # label = torch.Tensor([target2])
+    #        print('index {}'.format(index))
+       #     print('ind {}'.format(ind))
+      #      print(target)
+       #     print(target2)
             if target == target2:
               label = torch.Tensor([0])
             else:
               label = torch.Tensor([1])
+            #  print(index)
+             # print(ind)
+
+
+       #     print('label is {}'.format(label))
          #   print('the ref pic {}'.format(index))
          #   print('the randomly selected ref {}'.format(ind))
+
+        #    print(ind)
+
+     #       if  (index > 9):
+      #        print('index is bigger than 9')
+       #       print(index)
+        #      print(self.task)
+
+         #   if (ind == 8) & (label ==1):
+          #    print('label mismatch 1')
+
+           # if (ind == 153) & (label ==0):
+            #  print('label mismatch 2')
+             # print(index)
+              #print(ind)
         else:
             img2 = torch.Tensor([1])
-            label = target
+            label = torch.Tensor([target])
+
+
 
      #   print(index)
       #  print(ind)
        # print('target 1 is {}'.format(target))
         #print('target2 is {}'.format(target2))
         #print(label)
+
+       # print(self.task)
+       # print(index)
+       # print(ind)
+       # print(label)
+
+
 
         return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
 
