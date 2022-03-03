@@ -26,7 +26,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 
 
-def evaluate(ref_set, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
+def evaluate(ref_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
     model.cuda()
     model.eval()
@@ -165,4 +165,5 @@ if __name__ == '__main__':
     #test_ind = list(meta.loc[meta['test']==1, 'id'])
     model = torch.load('./outputs/' + model_name)
     criterion = ContrastiveLoss()
-    evaluate(model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+    ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
+    evaluate(ref_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
