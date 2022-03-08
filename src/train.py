@@ -18,12 +18,10 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
-    #    print(label)
-       # print('ed is {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
+def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
@@ -37,6 +35,11 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
     max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
+
+    train_losses = []
+    val_losses = []
+    aucs = []
+
     for epoch in range(epochs):
         model.train()
         loss_sum = 0
@@ -63,8 +66,11 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
         output_name = 'output_epoch_' + str(epoch)
         task = 'validate'
-        val_auc, val_loss = evaluate(train_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
-        train_auc, train_loss = evaluate(train_dataset, model, 'train', dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+
+        aucs.append(val_auc)
+        val_losses.append((val_loss.item() / len(indexes) )/ 1000)
+        train_losses.append((loss_sum / len(indexes)))
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
@@ -80,6 +86,12 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
         if stop_training:
           break
+
+        if epoch % 20 == 0:
+          if not os.path.exists('graph_data'):
+              os.makedirs('graph_data')
+          pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1)))
+
 
 
 
@@ -137,6 +149,7 @@ if __name__ == '__main__':
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
+    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
 
     if model_type == 'LeNet_Avg':
         model = LeNet_Avg()
@@ -167,4 +180,4 @@ if __name__ == '__main__':
 
 
     criterion = ContrastiveLoss()
-    train(model, train_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
+    train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
