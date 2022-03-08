@@ -52,7 +52,7 @@ class MNIST(data.Dataset):
 
         self.data, self.targets = self._load_data()
 
-        if self.indexes != []: #if indexes is equal to [], targets are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original targets
+        if self.indexes != []: #if indexes is equal to [], original labels are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original labels
           self.targets[self.targets != normal_class] = -1
           self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0

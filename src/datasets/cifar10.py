@@ -11,22 +11,7 @@ import numpy as np
 
 
 class CIFAR10(data.Dataset):
-    """`CIFAR10 <https://www.cs.toronto.edu/~kriz/cifar.html>`_ Dataset.
 
-    Args:
-        root (string): Root directory of dataset where directory
-            ``cifar-10-batches-py`` exists or will be saved to if download is set to True.
-        train (bool, optional): If True, creates dataset from training set, otherwise
-            creates from test set.
-        transform (callable, optional): A function/transform that takes in an PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes in the
-            target and transforms it.
-        download (bool, optional): If true, downloads the dataset from the internet and
-            puts it in root directory. If dataset is already downloaded, it is not
-            downloaded again.
-
-    """
     base_folder = 'cifar-10-batches-py'
     url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     filename = "cifar-10-python.tar.gz"
@@ -63,7 +48,7 @@ class CIFAR10(data.Dataset):
         if self.download_data:
             self.download()
 
-        if (self.task == 'train') | (self.task == 'validate') | (self.task == 'alt'):
+        if (self.task == 'train') | (self.task == 'validate'):
             downloaded_list = self.train_list
         else:
             downloaded_list = self.test_list
@@ -85,19 +70,14 @@ class CIFAR10(data.Dataset):
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
 
 
-        if self.indexes != []:
+        if self.indexes != []: #if indexes is equal to [], original labels are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original labels
           if (self.task == 'train') | (self.task == 'alt'):
               self.data = np.array(self.data)[self.indexes]
               new_targets=[]
               for i in indexes:
                 new_targets.append(self.targets[i])
               self.targets = new_targets
-              if self.task == 'alt':
-                self.data = self.data[indexes]
-                new_targets=[]
-                for i in indexes:
-                  new_targets.append(self.targets[i])
-                self.targets = new_targets
+
 
           elif self.task == 'validate':
               lst = list(range(0,len(self.data) ))
@@ -114,12 +94,10 @@ class CIFAR10(data.Dataset):
 
 
           self.targets = np.array(self.targets)
-          print(self.targets[0:20])
           self.targets[self.targets != normal_class] = -1
           self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0
           self.targets[self.targets == -1] = 1
-          print(self.targets[0:20])
 
 
 
@@ -157,20 +135,12 @@ class CIFAR10(data.Dataset):
 
             img2, target2 = self.data[ind], int(self.targets[ind])
 
-            if target == target2:
-              label = torch.Tensor([0])
-            else:
-              label = torch.Tensor([1])
-
-
+            label = torch.Tensor([0])
 
 
         else:
             img2 = torch.Tensor([1])
             label = torch.Tensor([target])
-
-
-
 
 
         return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
