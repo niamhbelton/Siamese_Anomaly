@@ -29,6 +29,10 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
         os.makedirs('outputs')
+    if not os.path.exists('outputs/models'):
+        os.makedirs('outputs/models')
+    if not os.path.exists('outputs/ED'):
+        os.makedirs('outputs/ED')
     best_val_auc = 0
     best_epoch = -1
     early_stop_iter = 0
@@ -64,7 +68,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
 
         print("Epoch: {}, Loss: {}".format(epoch+1, loss_sum))
 
-        output_name = 'output_epoch_' + str(epoch)
+        output_name = model_name + '_output_epoch_' + str(epoch)
         task = 'validate'
         val_auc, val_loss = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
@@ -78,7 +82,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
           best_epoch = epoch+1
           early_stop_iter = 0
           model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
-          torch.save(model.state_dict(), './outputs/' + model_name_temp)
+          torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
         else:
           early_stop_iter = early_stop_iter +1
           if early_stop_iter == max_iter:
@@ -178,6 +182,6 @@ if __name__ == '__main__':
 
 
 
-
+    model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
     train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)

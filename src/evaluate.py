@@ -75,7 +75,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
 
     df.columns=cols
     df = df.sort_values(by='mean', ascending = False).reset_index(drop=True)
-    df.to_csv('./outputs/' +output_name)
+    df.to_csv('./outputs/ED/' +output_name)
     print('Writing output to {}'.format(('./outputs/' +output_name)))
 
     if task != 'train':
@@ -108,6 +108,7 @@ def parse_arguments():
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('-o', '--output_name', type=str, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
@@ -125,6 +126,7 @@ if __name__ == '__main__':
     dataset = args.dataset
     task = args.task
     normal_class = args.normal_class
+    model_type = args.model_type
     output_name = args.output_name
     data_path = args.data_path
     N = args.num_ref
@@ -136,12 +138,28 @@ if __name__ == '__main__':
        indexes = [int(item) for item in args.index.split(', ')]
     else:
         download_data = False
-        indexes = create_reference(dataset, normal_class, 'train', data_path, download_data, N, seed, few_shot)
+        indexes = create_reference(dataset, normal_class, 'train', data_path, download_data, N, seed)
 
-    model = cifar_lenet()
-    model.load_state_dict(torch.load('./outputs/' + model_name))
+    if model_type == 'LeNet_Avg':
+        model = LeNet_Avg()
+    elif model_type == 'LeNet_Max':
+        model = LeNet_Max()
+    elif model_type == 'LeNet_Tan':
+        model = LeNet_Tan()
+    elif model_type == 'LeNet_Leaky':
+        model = LeNet_Leaky()
+    elif model_type == 'LeNet_Norm':
+        model = LeNet_Norm()
+    elif model_type == 'LeNet_Drop':
+        model = LeNet_Drop()
+#    if model_type == 'Net':
+#        model = Net()
+    elif model_type == 'cifar_lenet':
+        model = cifar_lenet()
+        
+    model.load_state_dict(torch.load('./outputs/models/' + model_name))
 
     criterion = ContrastiveLoss()
     ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
-    val_dataset = load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data=False)
+    val_dataset = load_dataset(dataset, indexes, normal_class, task, data_path, download_data=False)
     evaluate(ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
