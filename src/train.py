@@ -73,12 +73,12 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         val_auc, val_loss = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
         aucs.append(val_auc)
-        val_losses.append((val_loss.item() / len(indexes) )/ 1000)
+        val_losses.append(val_loss)
         train_losses.append((loss_sum / len(indexes)))
 
         print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
         print("Validation loss: {}".format(epoch+1, val_losses[-1]))
-        print('AUC is {}'.format(auc))
+        print('AUC is {}'.format(aucs[-1]))
 
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
