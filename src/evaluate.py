@@ -163,7 +163,9 @@ if __name__ == '__main__':
       #    indexes = list(meta.loc[meta['ref_set']==1, 'id'])
 
     #test_ind = list(meta.loc[meta['test']==1, 'id'])
-    model = torch.load('./outputs/' + model_name)
+    model = cifar_lenet()
+    model.load_state_dict(torch.load('./outputs/' + model_name))
+
     criterion = ContrastiveLoss()
     ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
     evaluate(ref_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)

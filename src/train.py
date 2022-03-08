@@ -72,7 +72,7 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
           best_epoch = epoch+1
           early_stop_iter = 0
           model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
-          torch.save(model, './outputs/' + model_name_temp)
+          torch.save(model.state_dict(), './outputs/' + model_name_temp)
         else:
           early_stop_iter = early_stop_iter +1
           if early_stop_iter == max_iter:
