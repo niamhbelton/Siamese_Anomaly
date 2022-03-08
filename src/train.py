@@ -77,7 +77,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         train_losses.append((loss_sum / len(indexes)))
 
         print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
-        print("Validation loss: {}".format(epoch+1, val_losses[-1]))
+        print("Validation loss: {}".format(val_losses[-1]))
         print('AUC is {}'.format(aucs[-1]))
 
         scheduler.step(val_loss)
@@ -98,13 +98,9 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         if stop_training:
           break
 
-        if epoch % 20 == 0:
-          if not os.path.exists('graph_data'):
-              os.makedirs('graph_data')
-          pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
-
-
-
+    if not os.path.exists('graph_data'):
+        os.makedirs('graph_data')
+    pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
 
     print("Finished Training")
     print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))

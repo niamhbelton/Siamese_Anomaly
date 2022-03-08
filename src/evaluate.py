@@ -159,4 +159,5 @@ if __name__ == '__main__':
     criterion = ContrastiveLoss()
     ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
     val_dataset = load_dataset(dataset, indexes, normal_class, task, data_path, download_data=False)
-    evaluate(ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+    auc, loss = evaluate(ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+    print('AUC is {}'.format(auc))
