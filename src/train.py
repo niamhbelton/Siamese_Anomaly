@@ -90,7 +90,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         if epoch % 20 == 0:
           if not os.path.exists('graph_data'):
               os.makedirs('graph_data')
-          pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1)))
+          pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
 
 
 

@@ -30,7 +30,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
 
 
 
-    loader = torch.utils.data.DataLoader(test, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
+    loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
     d={} #a dictionary of the reference images
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
     ref_images={} #dictionary for feature vectors of reference set
@@ -51,14 +51,15 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     for i, data in enumerate(loader):
 
         image = data[0][0]
-        labels.append(data[2].item())
+        label = data[2].item()
+        labels.append(label)
         sum =0
         out = model.forward(image.cuda().float())
-        for j in comp:
+        for j in range(0, len(indexes)):
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
-            loss_sum += criterion(out, ref_images['images{}'.format(j)], data[2].item())
+            loss_sum += criterion(out, ref_images['images{}'.format(j)], label)
 
         means.append(sum / len(ind))
         del image
@@ -68,7 +69,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
 
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
     cols = ['label','mean']
-    for i in comp:
+    for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
 
