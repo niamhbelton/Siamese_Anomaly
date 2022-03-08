@@ -89,20 +89,13 @@ def train(model, train_dataset, epochs, criterion, model_name, indexes, data_pat
 
 
 
-def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed, few_shot):
+def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
-    if few_shot == True:
-      for i in range(0,10):
-          if i != normal_class:
-            anom_ind = np.where(np.array(train_dataset.targets)==i)[0]
-            random.seed(seed)
-            s = random.sample(range(0, len(anom_ind)), 10)
-            final_indexes = np.append(final_indexes, anom_ind[s])
     return final_indexes
 
 
@@ -110,13 +103,11 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-#    parser.add_argument('--model_type', choices = ['Net', 'Net_simp', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'Net_Max'], required=True)
     parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
-    parser.add_argument('--few_shot', default = False)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -133,7 +124,6 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
-    few_shot = args.few_shot
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
@@ -143,7 +133,7 @@ if __name__ == '__main__':
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed, few_shot)
+        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed)
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
