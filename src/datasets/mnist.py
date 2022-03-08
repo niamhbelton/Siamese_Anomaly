@@ -138,7 +138,7 @@ class MNIST(data.Dataset):
         """
 
         img, target = self.data[index], int(self.targets[index])
-        img = img / 255
+    #    img = img / 255
 
         if self.task == 'train':
             np.random.seed(seed)
@@ -150,7 +150,7 @@ class MNIST(data.Dataset):
                 c=c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-            img2 = img2 / 255
+        #    img2 = img2 / 255
             label = torch.FloatTensor([0])
         else:
             img2 = torch.Tensor([1])

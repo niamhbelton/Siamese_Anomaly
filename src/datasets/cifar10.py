@@ -71,7 +71,7 @@ class CIFAR10(data.Dataset):
 
 
         if self.indexes != []: #if indexes is equal to [], original labels are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original labels
-          if (self.task == 'train') | (self.task == 'alt'):
+          if (self.task == 'train') :
               self.data = np.array(self.data)[self.indexes]
               new_targets=[]
               for i in indexes:
@@ -120,7 +120,7 @@ class CIFAR10(data.Dataset):
         """
 
         img, target = self.data[index], int(self.targets[index])
-        img = img / 255
+        #img = img / 255
 
 
         if self.task == 'train':
@@ -134,12 +134,12 @@ class CIFAR10(data.Dataset):
 
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-            img2 = img2 / 255
+            #img2 = img2 / 255
             label = torch.Tensor([0])
 
 
         else:
-            img2 = torch.Tensor([1]) #not required 
+            img2 = torch.Tensor([1]) #not required
             label = torch.Tensor([target])
 
 

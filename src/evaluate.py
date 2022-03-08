@@ -79,7 +79,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
         auc = metrics.auc(fpr, tpr)
 
-    avg_loss = (loss_sum.item() / len(indexes) )/ 1000
+    avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
     return auc, avg_loss
 
 
