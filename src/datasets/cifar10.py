@@ -112,12 +112,7 @@ class CIFAR10(data.Dataset):
 
 
     def __getitem__(self, index: int, seed = 1):
-        """
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is index of the target class.
-        """
+
 
         img, target = self.data[index], int(self.targets[index])
         #img = img / 255
