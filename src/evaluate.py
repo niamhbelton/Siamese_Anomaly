@@ -78,7 +78,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     if task != 'train':
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
         auc = metrics.auc(fpr, tpr)
-        print('AUC is {}'.format(auc))
+        
 
     return auc, loss_sum
 

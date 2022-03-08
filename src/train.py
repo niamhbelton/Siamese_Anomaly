@@ -66,9 +66,9 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             loss.backward()
             optimizer.step()
 
-        print("Epoch: {}, Loss: {}".format(epoch+1, loss_sum))
 
-        output_name = model_name + '_output_epoch_' + str(epoch)
+
+        output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
         val_auc, val_loss = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
@@ -76,12 +76,19 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         val_losses.append((val_loss.item() / len(indexes) )/ 1000)
         train_losses.append((loss_sum / len(indexes)))
 
+        print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
+        print("Validation loss: {}".format(epoch+1, val_losses[-1]))
+        print('AUC is {}'.format(auc))
+
         scheduler.step(val_loss)
         if val_auc > best_val_auc:
           best_val_auc = val_auc
           best_epoch = epoch+1
           early_stop_iter = 0
           model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
+          for f in os.listdir('./outputs/models/'):
+            if model_name in f :
+                os.remove(f'./outputs/models/{f}')
           torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
         else:
           early_stop_iter += 1
