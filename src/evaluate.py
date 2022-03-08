@@ -29,24 +29,22 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     model.eval()
 
 
-
+    #create loader for dataset that is testing
     loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
-    d={} #a dictionary of the reference images
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
     ref_images={} #dictionary for feature vectors of reference set
     ind = list(range(0, len(indexes)))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
-      img1, img2, label = ref_dataset.__getitem__(i)
-      d['compare{}'.format(i)] = img1 #ref_dataset.__getitem__(i)
-      ref_images['images{}'.format(i)] = model.forward( d['compare{}'.format(i)].cuda().float())
+      img1, _, _ = ref_dataset.__getitem__(i)
+      ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
       outs['outputs{}'.format(i)] =[]
 
     means = []
     lst=[]
     labels=[]
-    #loop through images in the dataloader
 
+    #loop through images in the dataloader
     loss_sum =0
     for i, data in enumerate(loader):
 
@@ -54,7 +52,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
         label = data[2].item()
         labels.append(label)
         sum =0
-        out = model.forward(image.cuda().float())
+        out = model.forward(image.cuda().float()) #get feature vector for test image
         for j in range(0, len(indexes)):
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
@@ -76,7 +74,6 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     df.columns=cols
     df = df.sort_values(by='mean', ascending = False).reset_index(drop=True)
     df.to_csv('./outputs/ED/' +output_name)
-    print('Writing output to {}'.format(('./outputs/' +output_name)))
 
     if task != 'train':
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
@@ -156,7 +153,7 @@ if __name__ == '__main__':
 #        model = Net()
     elif model_type == 'cifar_lenet':
         model = cifar_lenet()
-        
+
     model.load_state_dict(torch.load('./outputs/models/' + model_name))
 
     criterion = ContrastiveLoss()

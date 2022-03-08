@@ -9,20 +9,7 @@ import numpy as np
 import random
 
 class MNIST(data.Dataset):
-    """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
-    Args:
-        root (string): Root directory of dataset where ``MNIST/processed/training.pt``
-            and  ``MNIST/processed/test.pt`` exist.
-        train (bool, optional): If True, creates dataset from ``training.pt``,
-            otherwise from ``test.pt``.
-        download (bool, optional): If true, downloads the dataset from the internet and
-            puts it in root directory. If dataset is already downloaded, it is not
-            downloaded again.
-        transform (callable, optional): A function/transform that  takes in an PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes in the
-            target and transforms it.
-    """
+
 
     mirrors = [
         'http://yann.lecun.com/exdb/mnist/',
@@ -65,7 +52,7 @@ class MNIST(data.Dataset):
 
         self.data, self.targets = self._load_data()
 
-        if self.indexes != []:
+        if self.indexes != []: #if indexes is equal to [], targets are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original targets
           self.targets[self.targets != normal_class] = -1
           self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0
@@ -124,11 +111,10 @@ class MNIST(data.Dataset):
             data = self.read_image_file(os.path.join(self.data_path, image_file))
             label_file = "train-labels-idx1-ubyte"
             targets = self.read_label_file(os.path.join(self.data_path, label_file))
+
             if (self.task == 'train') & (self.indexes != []):
                 data = data[self.indexes]
                 targets = targets[self.indexes]
-
-
             elif self.task == 'validate':
                 lst = list(range(0,len(data) ))
                 ind = [x for i,x in enumerate(lst) if i not in self.indexes]
@@ -159,13 +145,9 @@ class MNIST(data.Dataset):
             np.random.seed(seed)
             ind = np.random.randint(len(self.indexes) )
             c=1
-           # print('in item 2{}'.format(index))
-           # print('in item {}'.format(ind))
             while (ind == index):
                 np.random.seed(seed * c)
-             #   print('c {}'.format(seed * c))
                 ind = np.random.randint(len(self.indexes) )
-              #  print('in the loop {}'.format(ind))
                 c=c+1
 
             img2, target2 = self.data[ind], int(self.targets[ind])
@@ -175,9 +157,7 @@ class MNIST(data.Dataset):
             img2 = torch.Tensor([1])
             label = target
 
-    #    print(seed)
-    #    print('index is {}'.format(index))
-    #    print('ind is {}'.format(ind))
+
 
         return img, img2, label
 
