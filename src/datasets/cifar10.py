@@ -120,7 +120,7 @@ class CIFAR10(data.Dataset):
         """
 
         img, target = self.data[index], int(self.targets[index])
-
+        img = img / 255
 
 
         if self.task == 'train':
@@ -134,12 +134,12 @@ class CIFAR10(data.Dataset):
 
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-
+            img2 = img2 / 255
             label = torch.Tensor([0])
 
 
         else:
-            img2 = torch.Tensor([1])
+            img2 = torch.Tensor([1]) #not required 
             label = torch.Tensor([target])
 
 
