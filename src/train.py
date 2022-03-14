@@ -21,7 +21,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
+def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
@@ -50,7 +50,10 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
         np.random.shuffle(ind)
-        for index in ind:
+        for i, index in enumerate(ind):
+
+
+            print(i)
             seed = (epoch+1) * (index+1)
             img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
@@ -59,12 +62,30 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             labels = labels.to(device)
             output1 = model.forward(img1.float())
             output2 = model.forward(img2.float())
-            loss = criterion(output1,output2,labels)
-            loss_sum+= loss.item()
-            # Backward and optimize
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+
+            if batch_size > 0:
+              if i ==0:
+                outputs1 = output1
+                outputs2 = output2
+              else:
+                outputs1 = torch.cat((outputs1, output1))
+                outputs2 = torch.cat((outputs2, output2))
+
+              if (i % batch_size == 0) |( i == (len(ind)-1)):
+                loss = criterion(outputs1,outputs2,labels)
+                loss_sum+= loss.item()
+                # Backward and optimize
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            else:
+                loss = criterion(output1,output2,labels)
+                loss_sum+= loss.item()
+                # Backward and optimize
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
 
 
 
@@ -124,6 +145,7 @@ def parse_arguments():
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--batch_size', type=int, default = 0)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
@@ -140,6 +162,7 @@ if __name__ == '__main__':
     model_name = args.model_name
     model_type = args.model_type
     dataset_name = args.dataset
+    batch_size = args.batch_size
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
@@ -187,4 +210,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
+    train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
