@@ -18,6 +18,12 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
+        print(output1.shape)
+        print(euclidean_distance)
+        print((self.margin - euclidean_distance).shape)
+        print(torch.zeros(euclidean_distance.shape[0]).shape)
+        a = torch.Tensor([ torch.zeros(euclidean_distance.shape[0]), self.margin - euclidean_distance])
+        e=torch.max(torch.Tensor([ torch.zeros(1,euclidean_distance.shape[0]), self.margin - euclidean_distance]))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
@@ -71,7 +77,7 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
                 outputs1 = torch.cat((outputs1, output1))
                 outputs2 = torch.cat((outputs2, output2))
 
-              if (i % batch_size == 0) |( i == (len(ind)-1)):
+              if ((i % batch_size == 0) & (i !=0 ) )|( i == (len(ind)-1)):
                 loss = criterion(outputs1,outputs2,labels)
                 loss_sum+= loss.item()
                 # Backward and optimize
