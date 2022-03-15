@@ -95,13 +95,20 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
           if early_stop_iter == max_iter:
             stop_training = True
 
+        if i % 20 == 0:
+          if not os.path.exists('graph_data'):
+              os.makedirs('graph_data')
+          for f in os.listdir('graph_data'):
+            if model_name in f :
+                os.remove(f'./graph_data/{f}')
+          pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
+
+
+
         if stop_training:
           break
 
-    if not os.path.exists('graph_data'):
-        os.makedirs('graph_data')
-    pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
-
+    
     print("Finished Training")
     print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
 
