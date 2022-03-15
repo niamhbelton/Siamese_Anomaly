@@ -33,7 +33,7 @@ class ContrastiveLoss(torch.nn.Module):
 def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=0.000015, weight_decay=0.1)
+    optimizer =  optim.SGD(model.parameters(), lr=1e-8, momentum=0.9)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -134,6 +134,15 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
           early_stop_iter += 1
           if early_stop_iter == max_iter:
             stop_training = True
+
+        if i % 20 == 0:
+          if not os.path.exists('graph_data'):
+              os.makedirs('graph_data')
+          for f in os.listdir('graph_data'):
+            if model_name in f :
+                os.remove(f'./graph_data/{f}')
+          pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
+
 
         if stop_training:
           break
