@@ -18,19 +18,22 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2)
-        print(output1.shape)
-        print(euclidean_distance)
-        print((self.margin - euclidean_distance).shape)
-        print(torch.zeros(euclidean_distance.shape[0]).shape)
-        a = torch.Tensor([ torch.zeros(euclidean_distance.shape[0]), self.margin - euclidean_distance])
-        e=torch.max(torch.Tensor([ torch.zeros(1,euclidean_distance.shape[0]), self.margin - euclidean_distance]))
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive
+
+        a = (self.margin - euclidean_distance).unsqueeze(0)
+        b=(torch.zeros(euclidean_distance.shape[0])).cuda().unsqueeze(0)
+        c=torch.cat((a,b), dim=0)
+        d=torch.max(c, dim=0).values
+
+       # a = torch.Tensor([ torch.zeros(euclidean_distance.shape[0]), self.margin - euclidean_distance])
+      #  e=torch.max(torch.Tensor([ torch.zeros(1,euclidean_distance.shape[0]), self.margin - euclidean_distance]))
+      #  loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
+        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(d, 2) * 0.5)
+        return loss_contrastive.sum()
 
 def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=0.000015, weight_decay=0.1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -42,13 +45,15 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
     best_val_auc = 0
     best_epoch = -1
     early_stop_iter = 0
-    max_iter = 5
+    max_iter = 500
     stop_training =False
     ind = list(range(0, len(indexes)))
 
     train_losses = []
     val_losses = []
     aucs = []
+
+    weight_totals = []
 
     for epoch in range(epochs):
         model.train()
@@ -59,7 +64,6 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
         for i, index in enumerate(ind):
 
 
-            print(i)
             seed = (epoch+1) * (index+1)
             img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
@@ -70,7 +74,7 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
             output2 = model.forward(img2.float())
 
             if batch_size > 0:
-              if i ==0:
+              if (i ==0) | ((i-1) % batch_size == 0):
                 outputs1 = output1
                 outputs2 = output2
               else:
@@ -84,6 +88,7 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+
             else:
                 loss = criterion(output1,output2,labels)
                 loss_sum+= loss.item()
@@ -93,6 +98,14 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
                 optimizer.step()
 
 
+        total = 0
+        for p in model.parameters():
+            dims = p.size()
+            n = p.cpu().data.numpy()
+            total += np.sum(np.abs(n))
+            weight_totals.append(total)
+
+        print('weight total {}'.format(total))
 
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
@@ -127,7 +140,7 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
 
     if not os.path.exists('graph_data'):
         os.makedirs('graph_data')
-    pd.concat([pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
+    pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
 
     print("Finished Training")
     print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
