@@ -24,16 +24,13 @@ class ContrastiveLoss(torch.nn.Module):
         c=torch.cat((a,b), dim=0)
         d=torch.max(c, dim=0).values
 
-       # a = torch.Tensor([ torch.zeros(euclidean_distance.shape[0]), self.margin - euclidean_distance])
-      #  e=torch.max(torch.Tensor([ torch.zeros(1,euclidean_distance.shape[0]), self.margin - euclidean_distance]))
-      #  loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(d, 2) * 0.5)
         return loss_contrastive.sum()
 
 def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer =  optim.SGD(model.parameters(), lr=1e-8, momentum=0.9)
+    optimizer =  optim.Adam(model.parameters(), lr=1e-5)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
