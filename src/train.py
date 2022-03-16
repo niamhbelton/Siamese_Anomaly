@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, simp
 import os
 import numpy as np
 import pandas as pd
@@ -30,7 +30,7 @@ class ContrastiveLoss(torch.nn.Module):
 def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer =  optim.Adam(model.parameters(), lr=1e-5)
+    optimizer =  optim.Adam(model.parameters(), lr=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -96,14 +96,17 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
 
 
         total = 0
+        num_params=0
         for p in model.parameters():
-            dims = p.size()
             n = p.cpu().data.numpy()
+            num_params += len(n.flatten())
+            print(n.flatten()[n.flatten() == 0.0])
             total += np.sum(np.abs(n))
-            weight_totals.append(total)
+
+        weight_totals.append(total)
 
         print('weight total {}'.format(total))
-
+        print('Mean weight {}'.format(total / num_params))
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
@@ -168,7 +171,7 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'simp'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default = 0)
     parser.add_argument('--normal_class', type=int, default = 0)
@@ -218,6 +221,8 @@ if __name__ == '__main__':
         model = LeNet_Norm()
     elif model_type == 'LeNet_Drop':
         model = LeNet_Drop()
+    elif model_type == 'simp':
+        model = simp()
 #    if model_type == 'Net':
 #        model = Net()
     elif model_type == 'cifar_lenet':

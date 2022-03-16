@@ -35,14 +35,17 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     ref_images={} #dictionary for feature vectors of reference set
     ind = list(range(0, len(indexes)))
     vec_sum = []
+    vec_mean =[]
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
       img1, _, _ = ref_dataset.__getitem__(i)
       ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
       outs['outputs{}'.format(i)] =[]
-      vec_sum.append(np.sum(np.sum(ref_images['images{}'.format(i)].detach().cpu().numpy())))
+      vec_sum.append(np.sum(np.abs(ref_images['images{}'.format(i)].detach().cpu().numpy())))
+      vec_mean.append(np.mean(ref_images['images{}'.format(i)].detach().cpu().numpy()))
 
-    pd.DataFrame(vec_sum).to_csv('ref_sum_'+ output_name)
+    pd.DataFrame(vec_sum).to_csv('./outputs/ref_sum_'+ output_name)
+    pd.DataFrame(vec_mean).to_csv('./outputs/ref_mean_'+ output_name)
     means = []
     lst=[]
     labels=[]
