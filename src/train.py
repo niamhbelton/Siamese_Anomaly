@@ -18,7 +18,7 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, label):
         euclidean_distance = F.pairwise_distance(output1, output2, eps=0)
-
+        print('ed is {}'.format(euclidean_distance))
         a = (self.margin - euclidean_distance).unsqueeze(0)
         b=(torch.zeros(euclidean_distance.shape[0])).cuda().unsqueeze(0)
         c=torch.cat((a,b), dim=0)
@@ -30,7 +30,7 @@ class ContrastiveLoss(torch.nn.Module):
 def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
     device='cuda'
     model.cuda()
-    optimizer =  optim.Adam(model.parameters(), lr=1e-4)
+    optimizer =  optim.SGD(model.parameters(), lr=1e-4, momentum=1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -88,6 +88,7 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
 
             else:
                 loss = criterion(output1,output2,labels)
+                print('the loss is {}'.format(loss))
                 loss_sum+= loss.item()
                 # Backward and optimize
                 optimizer.zero_grad()
@@ -97,7 +98,9 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
             for p in model.parameters():
               print(p)
 
+            print('the weight gradients are')
             print(model.conv1[0].weight.grad)
+            print('the weight bias are')
             print(model.conv1[0].bias.grad)
 
 
