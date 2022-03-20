@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, simp
+from model import LeNet_Avg, simp2, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, simp
 import os
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ class ContrastiveLoss(torch.nn.Module):
         self.margin = margin
 
     def forward(self, output1, output2, label):
-        euclidean_distance = F.pairwise_distance(output1, output2)
+        euclidean_distance = F.pairwise_distance(output1, output2, eps=0)
 
         a = (self.margin - euclidean_distance).unsqueeze(0)
         b=(torch.zeros(euclidean_distance.shape[0])).cuda().unsqueeze(0)
@@ -93,6 +93,12 @@ def train(model, batch_size, train_dataset, val_dataset, epochs, criterion, mode
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+
+            for p in model.parameters():
+              print(p)
+
+            print(model.conv1[0].weight.grad)
+            print(model.conv1[0].bias.grad)
 
 
         total = 0
@@ -171,7 +177,7 @@ def create_reference(dataset_name, normal_class, task, data_path, download_data,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'simp'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'simp2', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5', 'simp'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default = 0)
     parser.add_argument('--normal_class', type=int, default = 0)
@@ -223,6 +229,8 @@ if __name__ == '__main__':
         model = LeNet_Drop()
     elif model_type == 'simp':
         model = simp()
+    elif model_type == 'simp2':
+        model = simp2()
 #    if model_type == 'Net':
 #        model = Net()
     elif model_type == 'cifar_lenet':

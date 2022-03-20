@@ -122,6 +122,49 @@ class simp(nn.Module):
         return x #output
 
 
+#lenet without last layers and max pooling
+class simp2(nn.Module):
+    def __init__(self):
+        super(simp2, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=1,
+                kernel_size=5,
+                stride=1,
+                padding=0,
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2)
+        )
+
+      #  self.classifier = nn.Linear(144, 256)
+
+
+    #    self.conv1.weight.data.fill_(0.0)
+    #    self.conv1.bias.data.fill_(0.0)
+     #   self.classifier.weight.data.fill_(0.0)
+      #  self.classifier.bias.data.fill_(0.0)
+
+
+       # self.classifier = nn.Linear(1568, 512)
+
+     #   self.classifier = nn.Linear(1568, 64)
+
+      #  self.classifier = nn.Linear(1568, 2048)
+
+
+    def forward(self, x):
+        x = torch.unsqueeze(x, dim =0)
+        x = torch.unsqueeze(x, dim =0)
+        x = self.conv1(x)
+      #  print(x.shape)
+       # x = self.conv2(x)
+        x = x.view(x.size(0), -1)
+       # x = self.classifier(x)
+        return x #output
+
+
 class LeNet_Tan(nn.Module):
     def __init__(self):
         super(LeNet_Tan, self).__init__()
