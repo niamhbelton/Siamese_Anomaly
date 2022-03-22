@@ -44,13 +44,15 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     val_losses = []
     aucs = []
 
+    weight_totals = []
+
     for epoch in range(epochs):
         model.train()
         loss_sum = 0
         print("Starting epoch " + str(epoch+1))
         np.random.seed(epoch)
         np.random.shuffle(ind)
-        for index in ind:
+        for i, index in enumerate(ind):
             seed = (epoch+1) * (index+1)
             img1, img2, labels = train_dataset.__getitem__(index, seed)
             # Forward
@@ -108,7 +110,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         if stop_training:
           break
 
-    
+
     print("Finished Training")
     print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
 
