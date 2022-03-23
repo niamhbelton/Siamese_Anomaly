@@ -33,6 +33,9 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         os.makedirs('outputs/models')
     if not os.path.exists('outputs/ED'):
         os.makedirs('outputs/ED')
+    if not os.path.exists('graph_data'):
+        os.makedirs('graph_data')
+
     best_val_auc = 0
     best_epoch = -1
     early_stop_iter = 0
@@ -45,6 +48,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     aucs = []
 
     weight_totals = []
+    weight_means = []
 
     for epoch in range(epochs):
         model.train()
@@ -68,11 +72,25 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             loss.backward()
             optimizer.step()
 
+        #analysis of weights
+        total_abs = 0
+        total = 0
+        num_params=0
+        for p in model.parameters():
+            n = p.cpu().data.numpy()
+            num_params += len(n.flatten())
+            total_abs += np.sum(np.abs(n))
+            total += np.sum(n)
 
+        weight_totals.append(total)
+        weight_means.append(total / num_params)
+
+        print('Absolute value of weights {}'.format(total_abs))
+        print('Mean weight value {}'.format(total / num_params))
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
-        val_auc, val_loss = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss, vec_sum, vec_mean, feature_vectors = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -97,14 +115,13 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
           if early_stop_iter == max_iter:
             stop_training = True
 
-        if i % 20 == 0:
-          if not os.path.exists('graph_data'):
-              os.makedirs('graph_data')
+        if (i % 20 == 0) | (stop_training == True):
+
           for f in os.listdir('graph_data'):
             if model_name in f :
                 os.remove(f'./graph_data/{f}')
-          pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
-
+          pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(weight_means), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
+          pd.concat([pd.DataFrame(vec_sum, columns = ['sum_abs_vals']),pd.DataFrame(vec_mean, columns = ['mean_vals']),feature_vectors ], axis =1).to_csv('./graph_data/vectors_' + output_name)
 
 
         if stop_training:
