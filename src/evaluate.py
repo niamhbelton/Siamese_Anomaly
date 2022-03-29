@@ -23,7 +23,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 
 
-def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
+def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
     model.cuda()
     model.eval()
@@ -32,7 +32,9 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     #create loader for dataset that is testing
     loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1, drop_last=False)
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
+    outs2={}
     ref_images={} #dictionary for feature vectors of reference set
+    ref_images2={}
     ind = list(range(0, len(indexes)))
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
 
@@ -42,9 +44,15 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     cols=[]
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
-      img1, _, _ = ref_dataset.__getitem__(i)
+      img1, _, _, _,_ = ref_dataset.__getitem__(i)
+      if i == base_ind:
+        ref_images2['images{}'.format(i)] = feat1
+      else:
+        ref_images2['images{}'.format(i)] = model.forward( img1.cuda().float())
+
       ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
       outs['outputs{}'.format(i)] =[]
+      outs2['outputs{}'.format(i)] =[]
       vec_sum.append(np.sum(np.abs(ref_images['images{}'.format(i)].detach().cpu().numpy())))
       vec_mean.append(np.mean(ref_images['images{}'.format(i)].detach().cpu().numpy()))
       feature_vectors.append(ref_images['images{}'.format(i)].detach().cpu().numpy().tolist())
@@ -55,6 +63,7 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     feature_vectors = pd.DataFrame(feature_vectors)
 
     means = []
+    means2=[]
     lst=[]
     labels=[]
 
@@ -66,21 +75,26 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
         label = data[2].item()
         labels.append(label)
         sum =0
+        sum2=0
         out = model.forward(image.cuda().float()) #get feature vector for test image
         for j in range(0, len(indexes)):
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
+            euclidean_distance2 = F.pairwise_distance(out, ref_images2['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
+            outs2['outputs{}'.format(j)].append(euclidean_distance2.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
+            sum2 += euclidean_distance2.detach().cpu().numpy()[0]
             loss_sum += criterion(out, ref_images['images{}'.format(j)], label)
 
         means.append(sum / len(ind))
+        means2.append(sum2 / len(ind))
         del image
         del out
 
 
 
-    df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means)], axis =1)
-    cols = ['label','mean']
+    df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means),  pd.DataFrame(means2)], axis =1)
+    cols = ['label','mean', 'mean2']
     for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
@@ -93,6 +107,9 @@ def evaluate(ref_dataset, val_dataset, model, task, dataset_name, normal_class, 
     df.to_csv('./outputs/ED/' +output_name)
 
     if task != 'train':
+        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean2'])))
+        auc = metrics.auc(fpr, tpr)
+        print('oriignal auc {}'.format(auc))
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
         auc = metrics.auc(fpr, tpr)
 

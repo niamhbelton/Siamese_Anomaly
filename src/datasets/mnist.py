@@ -129,9 +129,12 @@ class MNIST(data.Dataset):
 
         return data, targets
 
-    def __getitem__(self, index: int, seed = 1):
-    
+    def __getitem__(self, index: int, seed = 1, base_ind=-1):
 
+
+
+        base=False
+        base2=False
         img, target = self.data[index], int(self.targets[index])
     #    img = img / 255
 
@@ -144,6 +147,14 @@ class MNIST(data.Dataset):
                 ind = np.random.randint(len(self.indexes) )
                 c=c+1
 
+            if ind == base_ind:
+              base = True
+
+            if ind == 0:
+              base2=True
+
+
+
             img2, target2 = self.data[ind], int(self.targets[ind])
         #    img2 = img2 / 255
             label = torch.FloatTensor([0])
@@ -153,7 +164,7 @@ class MNIST(data.Dataset):
 
 
 
-        return img, img2, label
+        return img, img2, label, base, base2
 
 
 
