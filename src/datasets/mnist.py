@@ -164,7 +164,7 @@ class MNIST(data.Dataset):
 
 
 
-        return img, img2, label, base, base2
+        return img, img2, label, base
 
 
 

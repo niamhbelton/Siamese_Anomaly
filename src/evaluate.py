@@ -44,7 +44,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     cols=[]
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
-      img1, _, _, _,_ = ref_dataset.__getitem__(i)
+      img1, _, _, _ = ref_dataset.__getitem__(i)
       if i == base_ind:
         ref_images2['images{}'.format(i)] = feat1
       else:

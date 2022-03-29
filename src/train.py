@@ -57,9 +57,8 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     rand_freeze = np.random.randint(len(indexes) )
     base_ind = ind[rand_freeze]
 
-    print(freeze)
     if freeze == True:
-      feat1, feat2 = init_feat_vec(model,base_ind , train_dataset)
+      feat1 = init_feat_vec(model,base_ind , train_dataset)
 
     for epoch in range(epochs):
         model.train()
@@ -70,7 +69,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         for i, index in enumerate(ind):
 
             seed = (epoch+1) * (index+1)
-            img1, img2, labels, base, base2 = train_dataset.__getitem__(index, seed, base_ind)
+            img1, img2, labels, base  = train_dataset.__getitem__(index, seed, base_ind)
 
             # Forward
             img1 = img1.to(device)
@@ -82,20 +81,14 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             else:
               output1 = model.forward(img1.float())
 
-            if (freeze == True) & (index ==0):
-              output1 = feat2
-            else:
-              output1 = model.forward(img1.float())
+
 
             if (freeze == True) & (base == True):
               output2 = feat1
             else:
               output2 = model.forward(img2.float())
 
-            if (freeze == True) & (base2 == True):
-              output2 = feat2
-            else:
-              output2 = model.forward(img2.float())
+
 
             loss = criterion(output1,output2,labels)
             loss_sum+= loss.item()
@@ -173,9 +166,8 @@ def init_feat_vec(model,base_ind, train_dataset ):
         feat2,_,_,_,_ = train_dataset.__getitem__(0)
         with torch.no_grad():
           feat1 = model(feat1.cuda().float()).cuda()
-          feat2 = model(feat2.cuda().float()).cuda()
 
-        return feat1, feat2
+        return feat1
 
 
 
