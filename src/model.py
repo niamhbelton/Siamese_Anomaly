@@ -57,7 +57,7 @@ class LeNet_Max(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
-        self.classifier = nn.Linear(1568, 1024)
+        self.classifier = nn.Linear(1568, 1024, bias=False)
 
        # self.classifier = nn.Linear(1568, 512)
 
