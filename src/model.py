@@ -47,13 +47,13 @@ class LeNet_Max(nn.Module):
                 out_channels=16,
                 kernel_size=5,
                 stride=1,
-                padding=2,
+                padding=2, bias=False
             ),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(16, 32, 5, 1, 2),
+            nn.Conv2d(16, 32, 5, 1, 2, bias=False),
             nn.ReLU(),
             nn.MaxPool2d(2)
         )
