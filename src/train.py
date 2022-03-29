@@ -162,8 +162,7 @@ def init_feat_vec(model,base_ind, train_dataset ):
         """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
 
         model.eval()
-        feat1,_,_,_,_ = train_dataset.__getitem__(base_ind)
-        feat2,_,_,_,_ = train_dataset.__getitem__(0)
+        feat1,_,_,_ = train_dataset.__getitem__(base_ind)
         with torch.no_grad():
           feat1 = model(feat1.cuda().float()).cuda()
 
