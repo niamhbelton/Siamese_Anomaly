@@ -134,7 +134,6 @@ class MNIST(data.Dataset):
 
 
         base=False
-        base2=False
         img, target = self.data[index], int(self.targets[index])
     #    img = img / 255
 
@@ -149,11 +148,6 @@ class MNIST(data.Dataset):
 
             if ind == base_ind:
               base = True
-
-            if ind == 0:
-              base2=True
-
-
 
             img2, target2 = self.data[ind], int(self.targets[ind])
         #    img2 = img2 / 255

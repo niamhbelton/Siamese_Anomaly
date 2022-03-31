@@ -1,5 +1,7 @@
 
 
+
+
 import torch
 from datasets.main import load_dataset
 from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
@@ -57,6 +59,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     rand_freeze = np.random.randint(len(indexes) )
     base_ind = ind[rand_freeze]
 
+    print(freeze)
     if freeze == True:
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
@@ -69,7 +72,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         for i, index in enumerate(ind):
 
             seed = (epoch+1) * (index+1)
-            img1, img2, labels, base  = train_dataset.__getitem__(index, seed, base_ind)
+            img1, img2, labels, base = train_dataset.__getitem__(index, seed, base_ind)
 
             # Forward
             img1 = img1.to(device)

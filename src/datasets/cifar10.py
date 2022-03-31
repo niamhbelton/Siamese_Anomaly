@@ -111,13 +111,13 @@ class CIFAR10(data.Dataset):
 
 
 
-    def __getitem__(self, index: int, seed = 1):
+    def __getitem__(self, index: int, seed = 1, base_ind=-1):
 
 
         img, target = self.data[index], int(self.targets[index])
         #img = img / 255
 
-
+        base=False
         if self.task == 'train':
             np.random.seed(seed)
             ind = np.random.randint(len(self.indexes.tolist()) )
@@ -127,6 +127,8 @@ class CIFAR10(data.Dataset):
                 ind = np.random.randint(len(self.indexes.tolist()) )
                 c = c+1
 
+            if ind == base_ind:
+              base = True
 
             img2, target2 = self.data[ind], int(self.targets[ind])
             #img2 = img2 / 255
@@ -138,7 +140,7 @@ class CIFAR10(data.Dataset):
             label = torch.Tensor([target])
 
 
-        return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label
+        return torch.FloatTensor(img).squeeze(0).squeeze(0), torch.FloatTensor(img2).squeeze(0).squeeze(0), label, base
 
 
 
