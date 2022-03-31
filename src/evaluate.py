@@ -109,7 +109,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     if task != 'train':
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean2'])))
         auc = metrics.auc(fpr, tpr)
-        print('oriignal auc {}'.format(auc))
+        print('AUC based on frozen vector {}'.format(auc))
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
         auc = metrics.auc(fpr, tpr)
 
