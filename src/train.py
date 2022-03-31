@@ -1,3 +1,7 @@
+
+
+
+
 import torch
 from datasets.main import load_dataset
 from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
@@ -21,7 +25,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name):
+def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
@@ -50,6 +54,15 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     weight_totals = []
     weight_means = []
 
+
+    np.random.seed(epochs)
+    rand_freeze = np.random.randint(len(indexes) )
+    base_ind = ind[rand_freeze]
+
+    print(freeze)
+    if freeze == True:
+      feat1 = init_feat_vec(model,base_ind , train_dataset)
+
     for epoch in range(epochs):
         model.train()
         loss_sum = 0
@@ -57,19 +70,34 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for i, index in enumerate(ind):
+
             seed = (epoch+1) * (index+1)
-            img1, img2, labels = train_dataset.__getitem__(index, seed)
+            img1, img2, labels, base = train_dataset.__getitem__(index, seed, base_ind)
+
             # Forward
             img1 = img1.to(device)
             img2 = img2.to(device)
             labels = labels.to(device)
-            output1 = model.forward(img1.float())
-            output2 = model.forward(img2.float())
+
+            if (freeze == True) & (index ==base_ind):
+              output1 = feat1
+            else:
+              output1 = model.forward(img1.float())
+
+
+
+            if (freeze == True) & (base == True):
+              output2 = feat1
+            else:
+              output2 = model.forward(img2.float())
+
+
+
             loss = criterion(output1,output2,labels)
             loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)
             optimizer.step()
 
         #analysis of weights
@@ -90,7 +118,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
-        val_auc, val_loss, vec_sum, vec_mean, feature_vectors = evaluate(train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss, vec_sum, vec_mean, feature_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -133,6 +161,17 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
 
 
 
+def init_feat_vec(model,base_ind, train_dataset ):
+        """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
+
+        model.eval()
+        feat1,_,_,_ = train_dataset.__getitem__(base_ind)
+        with torch.no_grad():
+          feat1 = model(feat1.cuda().float()).cuda()
+
+        return feat1
+
+
 
 def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
@@ -153,6 +192,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--freeze', default = True)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -169,6 +209,7 @@ if __name__ == '__main__':
     normal_class = args.normal_class
     N = args.num_ref
     seed = args.seed
+    freeze = args.freeze
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
@@ -213,4 +254,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name)
+    train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze)
