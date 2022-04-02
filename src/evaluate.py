@@ -41,6 +41,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     vec_sum = []
     vec_mean =[]
     feature_vectors = []
+    feature_vectors2 = []
     cols=[]
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
@@ -56,11 +57,13 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
       vec_sum.append(np.sum(np.abs(ref_images['images{}'.format(i)].detach().cpu().numpy())))
       vec_mean.append(np.mean(ref_images['images{}'.format(i)].detach().cpu().numpy()))
       feature_vectors.append(ref_images['images{}'.format(i)].detach().cpu().numpy().tolist())
+      feature_vectors2.append(ref_images2['images{}'.format(i)].detach().cpu().numpy().tolist())
       string = 'col_' + str(i)
       cols.append(string)
 
 
     feature_vectors = pd.DataFrame(feature_vectors)
+    feature_vectors2 = pd.DataFrame(feature_vectors2)
 
     means = []
     means2=[]
@@ -69,6 +72,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
     #loop through images in the dataloader
     loss_sum =0
+    test_vectors = []
     for i, data in enumerate(loader):
 
         image = data[0][0]
@@ -77,6 +81,8 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         sum =0
         sum2=0
         out = model.forward(image.cuda().float()) #get feature vector for test image
+        test_vectors.append(out.detach().cpu().numpy().tolist())
+
         for j in range(0, len(indexes)):
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
             euclidean_distance2 = F.pairwise_distance(out, ref_images2['images{}'.format(j)])
@@ -92,7 +98,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         del out
 
 
-
+    test_vectors = pd.DataFrame(test_vectors)
     df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means),  pd.DataFrame(means2)], axis =1)
     cols = ['label','mean', 'mean2']
     for i in range(0, len(indexes)):
@@ -114,7 +120,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         auc = metrics.auc(fpr, tpr)
 
     avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
-    return auc, avg_loss, vec_sum, vec_mean, feature_vectors
+    return auc, avg_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
 
 
 def softmax(x, axis=None):

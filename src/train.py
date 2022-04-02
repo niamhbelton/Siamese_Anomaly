@@ -118,7 +118,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
-        val_auc, val_loss, vec_sum, vec_mean, feature_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -150,6 +150,8 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
                 os.remove(f'./graph_data/{f}')
           pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(weight_means), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
           pd.concat([pd.DataFrame(vec_sum, columns = ['sum_abs_vals']),pd.DataFrame(vec_mean, columns = ['mean_vals']),feature_vectors ], axis =1).to_csv('./graph_data/vectors_' + output_name)
+          pd.concat([pd.DataFrame(vec_sum, columns = ['sum_abs_vals']),pd.DataFrame(vec_mean, columns = ['mean_vals']),feature_vectors2 ], axis =1).to_csv('./graph_data/vectors_orig_' + output_name)
+          test_vectors.to_csv('./graph_data/test_vectors_' + output_name)
 
 
         if stop_training:
