@@ -3,7 +3,7 @@ from torchvision.datasets.utils import download_and_extract_archive, extract_arc
 import torch.utils.data as data
 import os
 import pickle
-
+import pandas as pd
 import torch
 import torchvision.transforms as transforms
 import random
@@ -61,12 +61,18 @@ class CIFAR10(data.Dataset):
             file_path = os.path.join(self.data_path, self.base_folder, file_name)
             with open(file_path, 'rb') as f:
                 entry = pickle.load(f, encoding='latin1')
-                self.data.append(entry['data'])
                 if 'labels' in entry:
-                    self.targets.extend(entry['labels'])
+                    for i in range(0,len(entry['labels'])):
+                      if (entry['labels'][i] ==6) | (entry['labels'][i] ==1):
+                        if entry['labels'][i] ==1:
+                          entry['labels'][i] = 11
+                        self.targets.extend([entry['labels'][i]])
+                        self.data.append(entry['data'][i])
+
                 else:
                     self.targets.extend(entry['fine_labels'])
 
+        print(len(self.data))
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
 
 
@@ -89,8 +95,9 @@ class CIFAR10(data.Dataset):
                 new_targets.append(self.targets[i])
               self.targets = new_targets
 
-
-
+              print(self.data[:,0,:,:].reshape(1000,1024).shape)
+              pd.DataFrame(self.data[:,0,:,:].reshape(1000,1024)).to_csv('val_data.csv')
+              pd.DataFrame(self.targets).to_csv('val_targets.csv')
 
 
           self.targets = np.array(self.targets)
