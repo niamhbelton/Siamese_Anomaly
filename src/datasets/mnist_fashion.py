@@ -11,7 +11,7 @@ import random
 class FASHION(data.Dataset):
 
 
-     mirrors = ["http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"]
+    mirrors = ["http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"]
 
     resources = [
         ("train-images-idx3-ubyte.gz", "8d4fb7e6c68d591d4c3dfef9ec88bf0d"),

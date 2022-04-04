@@ -44,7 +44,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
     best_val_auc = 0
     best_epoch = -1
     early_stop_iter = 0
-    max_iter = 150
+    max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
 

@@ -1,6 +1,6 @@
 from .mnist import MNIST
 from .cifar10 import CIFAR10
-from .fashion import FASHION
+from .mnist_fashion import FASHION
 
 
 def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data,
