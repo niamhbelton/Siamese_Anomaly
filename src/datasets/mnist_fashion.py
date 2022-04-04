@@ -8,7 +8,7 @@ import codecs
 import numpy as np
 import random
 
-class MNIST(data.Dataset):
+class FASHION(data.Dataset):
 
 
      mirrors = ["http://fashion-mnist.s3-website.eu-central-1.amazonaws.com/"]
@@ -23,7 +23,7 @@ class MNIST(data.Dataset):
 
     training_file = 'training.pt'
     test_file = 'test.pt'
-    
+
 
     def __init__(self, indexes, root: str, normal_class,
             task, data_path,
