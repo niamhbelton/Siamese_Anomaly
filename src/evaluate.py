@@ -11,17 +11,6 @@ from datasets.main import load_dataset
 import random
 
 
-class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, margin=2.0):
-        super(ContrastiveLoss, self).__init__()
-        self.margin = margin
-
-    def forward(self, output1, output2, label):
-        euclidean_distance = F.pairwise_distance(output1, output2)
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive
-
-
 
 def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
@@ -80,6 +69,9 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         labels.append(label)
         sum =0
         sum2=0
+        mini=torch.Tensor([1000])
+        maxi = torch.Tensor([0])
+        mini2=torch.Tensor([1000])
         out = model.forward(image.cuda().float()) #get feature vector for test image
         test_vectors.append(out.detach().cpu().numpy().tolist())
 
@@ -90,17 +82,34 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
             outs2['outputs{}'.format(j)].append(euclidean_distance2.detach().cpu().numpy()[0])
             sum += euclidean_distance.detach().cpu().numpy()[0]
             sum2 += euclidean_distance2.detach().cpu().numpy()[0]
-            loss_sum += criterion(out, ref_images['images{}'.format(j)], label)
+            if euclidean_distance.detach().cpu().numpy()[0] < mini:
+              mini = euclidean_distance.detach().cpu().numpy()[0]
 
-        means.append(sum / len(ind))
-        means2.append(sum2 / len(ind))
+            if euclidean_distance.detach().cpu().numpy()[0] > maxi:
+              maxi = euclidean_distance.detach().cpu().numpy()[0]
+
+            if euclidean_distance2.detach().cpu().numpy()[0] < mini2:
+              mini2 = euclidean_distance2.detach().cpu().numpy()[0]
+
+            loss_sum += criterion(out, ref_images['images{}'.format(j)],feat1, label)
+
+        means.append(mini)
+        means2.append(mini2)
+        if i <10:
+          if label == 0:
+            print('the min ed dist is {}'.format(mini))
+            print('the max ed dist is {}'.format(maxi))
         del image
         del out
 
 
-    test_vectors = pd.DataFrame(test_vectors)
-    df = pd.concat([pd.DataFrame(labels), pd.DataFrame(means),  pd.DataFrame(means2)], axis =1)
+    test_vectors = pd.concat([pd.DataFrame(labels), pd.DataFrame(test_vectors)], axis =1)
     cols = ['label','mean', 'mean2']
+    df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(means, columns = ['mean']),  pd.DataFrame(means2, columns = ['mean2'])], axis =1)
+
+
+    print('the mean of anoms is {}'.format(np.mean(df['mean'].loc[df['label'] == 1])))
+    print('the mean of normals is {}'.format(np.mean(df['mean'].loc[df['label'] == 0])))
     for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))

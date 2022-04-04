@@ -1,7 +1,5 @@
 
 
-
-
 import torch
 from datasets.main import load_dataset
 from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
@@ -20,8 +18,11 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, output2, label):
+    def forward(self, output1, output2, feat1, label, task=False):
+
         euclidean_distance = F.pairwise_distance(output1, output2)
+        if task == True:
+          print('ed {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
@@ -84,16 +85,17 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             else:
               output1 = model.forward(img1.float())
 
-
-
             if (freeze == True) & (base == True):
               output2 = feat1
             else:
               output2 = model.forward(img2.float())
 
 
+            if i == 3:
+              loss = criterion(output1,output2,feat1,labels,True)
+            else:
+              loss = criterion(output1,output2,feat1,labels)
 
-            loss = criterion(output1,output2,labels)
             loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
@@ -228,6 +230,7 @@ if __name__ == '__main__':
     val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
 
     if model_type == 'LeNet_Avg':
+        print('here')
         model = LeNet_Avg()
     elif model_type == 'LeNet_Max':
         model = LeNet_Max()
