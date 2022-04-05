@@ -69,9 +69,9 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         labels.append(label)
         sum =0
         sum2=0
-        mini=torch.Tensor([1000])
+        mini=torch.Tensor([10000000000])
         maxi = torch.Tensor([0])
-        mini2=torch.Tensor([1000])
+        mini2=torch.Tensor([1000000000])
         out = model.forward(image.cuda().float()) #get feature vector for test image
         test_vectors.append(out.detach().cpu().numpy().tolist())
 
@@ -105,11 +105,13 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
     test_vectors = pd.concat([pd.DataFrame(labels), pd.DataFrame(test_vectors)], axis =1)
     cols = ['label','mean', 'mean2']
+    print(means)
+    pd.DataFrame(means, columns = ['mean'])
     df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(means, columns = ['mean']),  pd.DataFrame(means2, columns = ['mean2'])], axis =1)
 
 
-    print('the mean of anoms is {}'.format(np.mean(df['mean'].loc[df['label'] == 1])))
-    print('the mean of normals is {}'.format(np.mean(df['mean'].loc[df['label'] == 0])))
+    print('the mean of anoms is {} with standard deviation {}'.format(np.mean(df['mean'].loc[df['label'] == 1]),np.std(df['mean'].loc[df['label'] == 1])) )
+    print('the mean of normals is {} with standard deviation {}'.format(np.mean(df['mean'].loc[df['label'] == 0]), np.std(df['mean'].loc[df['label'] == 0])))
     for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))

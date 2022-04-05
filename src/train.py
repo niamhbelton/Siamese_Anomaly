@@ -23,13 +23,13 @@ class ContrastiveLoss(torch.nn.Module):
         euclidean_distance = F.pairwise_distance(output1, output2)
         if task == True:
           print('ed {}'.format(euclidean_distance))
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
+        loss_contrastive = 200*(((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5))
         return loss_contrastive
 
 def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=0.1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -96,11 +96,16 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             else:
               loss = criterion(output1,output2,feat1,labels)
 
+            output_name = model_name + '_output_epoch_' + str(epoch+1)
+            task = 'validate'
+            val_auc, val_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+
             loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward(retain_graph=True)
             optimizer.step()
+
 
         #analysis of weights
         total_abs = 0
