@@ -96,9 +96,8 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         means.append(mini)
         means2.append(mini2)
         if i <10:
-          if label == 0:
-            print('the min ed dist is {}'.format(mini))
-            print('the max ed dist is {}'.format(maxi))
+            print('the min ed dist is {} for label {}'.format(mini, label))
+            print('the max ed dist is {} for label {}'.format(maxi, label))
         del image
         del out
 
