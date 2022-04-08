@@ -1,5 +1,3 @@
-
-
 import torch
 from datasets.main import load_dataset
 from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
@@ -20,7 +18,9 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, feat1, label, task=False):
 
+        #euclidean_distance = (1-(1/0.1))*F.pairwise_distance(output1, output2)
         euclidean_distance = F.pairwise_distance(output1, output2)
+
         if task == True:
           print('ed {}'.format(euclidean_distance))
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
@@ -177,13 +177,24 @@ def init_feat_vec(model,base_ind, train_dataset ):
 
 
 
-def create_reference(dataset_name, normal_class, task, data_path, download_data, N, seed):
+def create_reference(contamination, dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
+    if contamination != 0:
+      numb = np.floor(N*contamination)
+      print(numb)
+      if numb == 0.0:
+        numb=1.0
+        print('here')
+
+      con = np.where(np.array(train_dataset.targets)!=normal_class)[0]
+      print(con)
+      samp = random.sample(range(0, len(con)), int(numb))
+      final_indexes = np.array(list(final_indexes) + list(con[samp]))
     return final_indexes
 
 
@@ -200,6 +211,7 @@ def parse_arguments():
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
+    parser.add_argument('--contamination',  type=float, default=0)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -217,13 +229,14 @@ if __name__ == '__main__':
     epochs = args.epochs
     data_path = args.data_path
     download_data = args.download_data
+    contamination = args.contamination
     indexes = args.index
     task = 'train'
 
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(dataset_name, normal_class, task,  data_path, download_data, N, seed)
+        indexes = create_reference(contamination, dataset_name, normal_class, task,  data_path, download_data, N, seed)
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
