@@ -91,10 +91,10 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
               output2 = model.forward(img2.float())
 
 
-            if i == 3:
-              loss = criterion(output1,output2,feat1,labels,True)
-            else:
-              loss = criterion(output1,output2,feat1,labels)
+        #    if i == 3:
+        #      loss = criterion(output1,output2,feat1,labels,True)
+        #    else:
+            loss = criterion(output1,output2,feat1,labels)
 
             loss_sum+= loss.item()
             # Backward and optimize
@@ -103,20 +103,20 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             optimizer.step()
 
         #analysis of weights
-        total_abs = 0
-        total = 0
-        num_params=0
-        for p in model.parameters():
-            n = p.cpu().data.numpy()
-            num_params += len(n.flatten())
-            total_abs += np.sum(np.abs(n))
-            total += np.sum(n)
+    #    total_abs = 0
+    #    total = 0
+    #    num_params=0
+    #    for p in model.parameters():
+    #        n = p.cpu().data.numpy()
+    #        num_params += len(n.flatten())
+    #        total_abs += np.sum(np.abs(n))
+    #        total += np.sum(n)
 
-        weight_totals.append(total)
-        weight_means.append(total / num_params)
+    #    weight_totals.append(total)
+    #    weight_means.append(total / num_params)
 
-        print('Absolute value of weights {}'.format(total_abs))
-        print('Mean weight value {}'.format(total / num_params))
+    #    print('Absolute value of weights {}'.format(total_abs))
+    #    print('Mean weight value {}'.format(total / num_params))
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
@@ -189,10 +189,8 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
       print(numb)
       if numb == 0.0:
         numb=1.0
-        print('here')
 
       con = np.where(np.array(train_dataset.targets)!=normal_class)[0]
-      print(con)
       samp = random.sample(range(0, len(con)), int(numb))
       final_indexes = np.array(list(final_indexes) + list(con[samp]))
     return final_indexes

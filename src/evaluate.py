@@ -56,7 +56,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
     means = []
     means2=[]
-    means_actual=[]
+    minimum_dists=[]
     lst=[]
     labels=[]
 
@@ -95,30 +95,30 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
             loss_sum += criterion(out, ref_images['images{}'.format(j)],feat1, label)
 
-        means.append(mini)
-        means_actual.append(sum/30)
+        minimum_dists.append(mini)
+        means.append(sum/30)
         means2.append(mini2)
-        if i <10:
-          if label == 0:
-            print('the min ed dist is {}'.format(mini))
-            print('the max ed dist is {}'.format(maxi))
+    #    if i <10:
+    #      if label == 0:
+    #        print('the min ed dist is {}'.format(mini))
+    #        print('the max ed dist is {}'.format(maxi))
         del image
         del out
 
 
     test_vectors = pd.concat([pd.DataFrame(labels), pd.DataFrame(test_vectors)], axis =1)
-    cols = ['label','mean', 'mean2', 'means_actual']
-    df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(means, columns = ['mean']),  pd.DataFrame(means2, columns = ['mean2']), pd.DataFrame(means_actual, columns = ['means_actual'])], axis =1)
+    cols = ['label','minimum_dists', 'mean2', 'means']
+    df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(minimum_dists, columns = ['minimum_dists']),  pd.DataFrame(means2, columns = ['mean2']), pd.DataFrame(means, columns = ['means'])], axis =1)
 
 
-    print('the mean of anoms is {}'.format(np.mean(df['mean'].loc[df['label'] == 1])))
-    print('the mean of normals is {}'.format(np.mean(df['mean'].loc[df['label'] == 0])))
+    print('the mean of anoms is {}'.format(np.mean(df['minimum_dists'].loc[df['label'] == 1])))
+    print('the mean of normals is {}'.format(np.mean(df['minimum_dists'].loc[df['label'] == 0])))
     for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
 
     df.columns=cols
-    df = df.sort_values(by='mean', ascending = False).reset_index(drop=True)
+    df = df.sort_values(by='minimum_dists', ascending = False).reset_index(drop=True)
     for f in os.listdir('./outputs/ED/'):
       if output_name in f :
           os.remove(f'./outputs/ED/{f}')
@@ -127,12 +127,12 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     if task != 'train':
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean2'])))
         auc = metrics.auc(fpr, tpr)
-        print('AUC based on frozen vector {}'.format(auc))
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means_actual'])))
+    #    print('AUC based on frozen vector {}'.format(auc))
+        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means'])))
         auc = metrics.auc(fpr, tpr)
-        print('AUC based on actual means {}'.format(auc))
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean'])))
-        auc = metrics.auc(fpr, tpr)
+    #    print('AUC based on mean distance to reference images {}'.format(auc))
+    #    fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['minimum_dists'])))
+    #    auc = metrics.auc(fpr, tpr)
 
     avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
     return auc, avg_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
