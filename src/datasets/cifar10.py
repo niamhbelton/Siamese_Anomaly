@@ -63,9 +63,6 @@ class CIFAR10(data.Dataset):
                 entry = pickle.load(f, encoding='latin1')
                 if 'labels' in entry:
                     for i in range(0,len(entry['labels'])):
-                      if (entry['labels'][i] ==6) | (entry['labels'][i] ==1):
-                        if entry['labels'][i] ==1:
-                          entry['labels'][i] = 11
                         self.targets.extend([entry['labels'][i]])
                         self.data.append(entry['data'][i])
 
