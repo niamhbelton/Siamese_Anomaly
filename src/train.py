@@ -18,7 +18,7 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, feat1, label, task=False):
 
-        #euclidean_distance = (1-(1/0.1))*F.pairwise_distance(output1, output2)
+        #euclidean_distance = (1-0.1)*F.pairwise_distance(output1, output2)
         euclidean_distance = F.pairwise_distance(output1, output2)
 
         if task == True:
