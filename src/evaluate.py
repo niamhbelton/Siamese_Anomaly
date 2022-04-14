@@ -31,28 +31,30 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     vec_mean =[]
     feature_vectors = []
     feature_vectors2 = []
+    f=[]
     cols=[]
+
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
       img1, _, _, _ = ref_dataset.__getitem__(i)
       if i == base_ind:
-        ref_images2['images{}'.format(i)] = feat1
+        ref_images['images{}'.format(i)] = feat1
       else:
-        ref_images2['images{}'.format(i)] = model.forward( img1.cuda().float())
+        ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
 
-      ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
+    #  ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
       outs['outputs{}'.format(i)] =[]
       outs2['outputs{}'.format(i)] =[]
       vec_sum.append(np.sum(np.abs(ref_images['images{}'.format(i)].detach().cpu().numpy())))
       vec_mean.append(np.mean(ref_images['images{}'.format(i)].detach().cpu().numpy()))
-      feature_vectors.append(ref_images['images{}'.format(i)].detach().cpu().numpy().tolist())
-      feature_vectors2.append(ref_images2['images{}'.format(i)].detach().cpu().numpy().tolist())
+     # feature_vectors.append(ref_images['images{}'.format(i)].detach().cpu().numpy().tolist())
+     # feature_vectors2.append(ref_images2['images{}'.format(i)].detach().cpu().numpy().tolist())
+      f.append(ref_images['images{}'.format(i)])
       string = 'col_' + str(i)
       cols.append(string)
 
-
-    feature_vectors = pd.DataFrame(feature_vectors)
-    feature_vectors2 = pd.DataFrame(feature_vectors2)
+   # feature_vectors = pd.DataFrame(feature_vectors)
+   # feature_vectors2 = pd.DataFrame(feature_vectors2)
 
     means = []
     means2=[]
@@ -78,25 +80,28 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
         for j in range(0, len(indexes)):
             euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
-            euclidean_distance2 = F.pairwise_distance(out, ref_images2['images{}'.format(j)])
-            outs['outputs{}'.format(j)].append(euclidean_distance.detach().cpu().numpy()[0])
-            outs2['outputs{}'.format(j)].append(euclidean_distance2.detach().cpu().numpy()[0])
-            sum += euclidean_distance.detach().cpu().numpy()[0]
-            sum2 += euclidean_distance2.detach().cpu().numpy()[0]
-            if euclidean_distance.detach().cpu().numpy()[0] < mini:
-              mini = euclidean_distance.detach().cpu().numpy()[0]
+          #  euclidean_distance2 = F.pairwise_distance(out, ref_images2['images{}'.format(j)])
+            outs['outputs{}'.format(j)].append(euclidean_distance.item())
+          #  outs2['outputs{}'.format(j)].append(euclidean_distance2.item())
+            sum += euclidean_distance.item()
+          #  sum2 += euclidean_distance2.detach().cpu().numpy()[0]
+            if euclidean_distance.detach().item() < mini:
+              mini = euclidean_distance.item()
 
-            if euclidean_distance.detach().cpu().numpy()[0] > maxi:
+            if euclidean_distance.item() > maxi:
               maxi = euclidean_distance.detach().cpu().numpy()[0]
 
-            if euclidean_distance2.detach().cpu().numpy()[0] < mini2:
-              mini2 = euclidean_distance2.detach().cpu().numpy()[0]
+         #   if euclidean_distance2.item() < mini2:
+         #     mini2 = euclidean_distance2.detach().cpu().numpy()[0]
 
-
-            loss_sum += criterion(out, ref_images['images{}'.format(j)],feat1, label)
+        if i % 100 == 0:
+          print(label)
+          loss_sum += criterion(out,f, label, True)
+        else:
+          loss_sum += criterion(out,f, label)
 
         minimum_dists.append(mini)
-        means.append(sum/30)
+        means.append(sum/len(indexes))
         means2.append(mini2)
     #    if i <10:
     #      if label == 0:
@@ -105,14 +110,15 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         del image
         del out
 
+    del f
 
     test_vectors = pd.concat([pd.DataFrame(labels), pd.DataFrame(test_vectors)], axis =1)
     cols = ['label','minimum_dists', 'mean2', 'means']
     df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(minimum_dists, columns = ['minimum_dists']),  pd.DataFrame(means2, columns = ['mean2']), pd.DataFrame(means, columns = ['means'])], axis =1)
 
 
-    print('the mean of anoms is {}'.format(np.mean(df['minimum_dists'].loc[df['label'] == 1])))
-    print('the mean of normals is {}'.format(np.mean(df['minimum_dists'].loc[df['label'] == 0])))
+    print('the mean of anoms is {}'.format(np.mean(df['means'].loc[df['label'] == 1])))
+    print('the mean of normals is {}'.format(np.mean(df['means'].loc[df['label'] == 0])))
     for i in range(0, len(indexes)):
         df= pd.concat([df, pd.DataFrame(outs['outputs{}'.format(i)])], axis =1)
         cols.append('ref{}'.format(i))
@@ -127,14 +133,14 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     if task != 'train':
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean2'])))
         auc = metrics.auc(fpr, tpr)
-    #    print('AUC based on frozen vector {}'.format(auc))
+        print('AUC based on frozen vector {}'.format(auc))
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means'])))
         auc = metrics.auc(fpr, tpr)
     #    print('AUC based on mean distance to reference images {}'.format(auc))
     #    fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['minimum_dists'])))
     #    auc = metrics.auc(fpr, tpr)
 
-    avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
+    avg_loss = (loss_sum.item()  )/ val_dataset.__len__()
     return auc, avg_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
 
 

@@ -263,7 +263,17 @@ class cifar_lenet(nn.Module):
           nn.ReLU(),
           nn.MaxPool2d(2)
       )
-      self.classifier = nn.Linear(2048, 1024,bias=False)
+      self.conv3 = nn.Sequential(
+          nn.Conv2d(32, 64, 5, 1, 2,bias=False),
+          nn.ReLU(),
+          nn.MaxPool2d(2)
+      )
+      self.conv4 = nn.Sequential(
+          nn.Conv2d(64, 124, 5, 1, 2,bias=False),
+          nn.ReLU(),
+          nn.MaxPool2d(2)
+      )
+      self.classifier = nn.Linear(496, 224,bias=False)
 
 
       # self.classifier = nn.Linear(1568, 512)
@@ -277,6 +287,8 @@ class cifar_lenet(nn.Module):
       x = torch.unsqueeze(x, dim =0)
       x = self.conv1(x)
       x = self.conv2(x)
+      x = self.conv3(x)
+      x = self.conv4(x)
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
       return x #output
