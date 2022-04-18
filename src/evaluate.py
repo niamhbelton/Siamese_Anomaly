@@ -72,9 +72,9 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         labels.append(label)
         sum =0
         sum2=0
-        mini=torch.Tensor([1000])
+        mini=torch.Tensor([10000000000000000])
         maxi = torch.Tensor([0])
-        mini2=torch.Tensor([1000])
+        mini2=torch.Tensor([10000000000000000])
         out = model.forward(image.cuda().float()) #get feature vector for test image
         test_vectors.append(out.detach().cpu().numpy().tolist())
 
