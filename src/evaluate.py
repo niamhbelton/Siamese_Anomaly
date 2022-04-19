@@ -12,9 +12,23 @@ import random
 
 
 
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, margin=2.0):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label, task=False):
+
+        euclidean_distance = F.pairwise_distance(output1, output2)
+
+       # if task == True:
+      #    print('ed {}'.format(euclidean_distance))
+
+        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
+        return loss_contrastive
+
 def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
 
-    model.cuda()
     model.eval()
 
 
@@ -53,8 +67,8 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
       string = 'col_' + str(i)
       cols.append(string)
 
-   # feature_vectors = pd.DataFrame(feature_vectors)
-   # feature_vectors2 = pd.DataFrame(feature_vectors2)
+    feature_vectors = pd.DataFrame(feature_vectors)
+    feature_vectors2 = pd.DataFrame(feature_vectors2)
 
     means = []
     means2=[]
@@ -96,7 +110,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
        # if i % 100 == 0:
        #   print(label)
-            loss_sum += criterion(out,ref_images['images{}'.format(j)], label, True)
+            loss_sum += criterion(out,ref_images['images{}'.format(j)], feat1,label, True)
        # else:
        #   loss_sum += criterion(out,f, label)
 
@@ -179,6 +193,8 @@ def parse_arguments():
 
 if __name__ == '__main__':
 
+    from train import *
+
     args = parse_arguments()
     model_name = args.model_name
     dataset = args.dataset
@@ -216,9 +232,16 @@ if __name__ == '__main__':
         model = cifar_lenet()
 
     model.load_state_dict(torch.load('./outputs/models/' + model_name))
+    model.cuda()
 
     criterion = ContrastiveLoss()
     ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
     val_dataset = load_dataset(dataset, indexes, normal_class, task, data_path, download_data=False)
-    auc, loss = evaluate(ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+    ind=list(range(0,len(indexes)))
+    np.random.seed(50)
+    rand_freeze = np.random.randint(len(indexes) )
+    base_ind = ind[rand_freeze]
+    feat1 = init_feat_vec(model,base_ind, ref_dataset )
+    auc, loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+
     print('AUC is {}'.format(auc))
