@@ -94,11 +94,11 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
          #   if euclidean_distance2.item() < mini2:
          #     mini2 = euclidean_distance2.detach().cpu().numpy()[0]
 
-        if i % 100 == 0:
-          print(label)
-          loss_sum += criterion(out,f, label, True)
-        else:
-          loss_sum += criterion(out,f, label)
+       # if i % 100 == 0:
+       #   print(label)
+            loss_sum += criterion(out,ref_images['images{}'.format(j)], label, True)
+       # else:
+       #   loss_sum += criterion(out,f, label)
 
         minimum_dists.append(mini)
         means.append(sum/len(indexes))
@@ -140,7 +140,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     #    fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['minimum_dists'])))
     #    auc = metrics.auc(fpr, tpr)
 
-    avg_loss = (loss_sum.item()  )/ val_dataset.__len__()
+    avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
     return auc, avg_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
 
 

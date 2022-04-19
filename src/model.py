@@ -247,33 +247,47 @@ class cifar_lenet(nn.Module):
   def __init__(self):
       super(cifar_lenet, self).__init__()
 
-      self.conv1 = nn.Sequential(
-          nn.Conv2d(
+      self.conv1 =nn.Conv2d(
               in_channels=3,
-              out_channels=16,
-              kernel_size=5,
+              out_channels=32,
+              kernel_size=3,
               stride=1,
-              padding=2,bias=False
-          ),
-          nn.ReLU(),
-          nn.MaxPool2d(kernel_size=2)
-      )
-      self.conv2 = nn.Sequential(
-          nn.Conv2d(16, 32, 5, 1, 2,bias=False),
-          nn.ReLU(),
-          nn.MaxPool2d(2)
-      )
-      self.conv3 = nn.Sequential(
-          nn.Conv2d(32, 64, 5, 1, 2,bias=False),
-          nn.ReLU(),
-          nn.MaxPool2d(2)
-      )
-      self.conv4 = nn.Sequential(
-          nn.Conv2d(64, 124, 5, 1, 2,bias=False),
-          nn.ReLU(),
-          nn.MaxPool2d(2)
-      )
-      self.classifier = nn.Linear(496, 224,bias=False)
+              padding=0,bias=False
+          )
+      self.bn1 = nn.BatchNorm2d(32, eps=1e-04, affine=False)
+      self.act = nn.LeakyReLU()
+      self.conv2 =nn.Conv2d(
+              in_channels=32,
+              out_channels=32,
+              kernel_size=3,
+              stride=1,
+              padding=0,bias=False
+          )
+      self.act2 = nn.LeakyReLU()
+      self.pool=nn.MaxPool2d(kernel_size=2)
+
+      self.conv3 =nn.Conv2d(
+              in_channels=32,
+              out_channels=64,
+              kernel_size=3,
+              stride=1,
+              padding=0,bias=False
+          )
+      self.act3 = nn.LeakyReLU()
+      self.conv4 =nn.Conv2d(
+              in_channels=64,
+              out_channels=64,
+              kernel_size=3,
+              stride=1,
+              padding=0,bias=False
+          )
+      self.act4 = nn.LeakyReLU()
+      self.pool2 = nn.MaxPool2d(kernel_size=2)
+
+
+      self.classifier = nn.Linear(2880, 1024,bias=False)
+      self.drop = nn.Dropout(p=0.5)
+      self.classifier2 = nn.Linear(1024, 512,bias=False)
 
 
       # self.classifier = nn.Linear(1568, 512)
@@ -285,10 +299,27 @@ class cifar_lenet(nn.Module):
 
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
+      x = F.pad(x, (0, 0, 2, 1))
       x = self.conv1(x)
+      x = self.bn1(x)
+      x = self.act(x)
+      x = F.pad(x, (0, 0, 2, 1))
       x = self.conv2(x)
+      x = self.act2(x)
+      x= self.pool(x)
+
+      x = F.pad(x, (0, 0, 2, 1))
       x = self.conv3(x)
+      x = self.act3(x)
+      x = F.pad(x, (0, 0, 2, 1))
       x = self.conv4(x)
+      x = self.act4(x)
+      x= self.pool2(x)
+
+
+
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
+      x = self.drop(x)
+      x = self.classifier2(x)
       return x #output

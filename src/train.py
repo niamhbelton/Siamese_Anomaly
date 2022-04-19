@@ -16,14 +16,12 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, vectors, label, task=False):
-        euclidean_distance =torch.FloatTensor([0]).cuda()
+    def forward(self, output1, output2, label, task=False):
 
-        for i in vectors:
-          euclidean_distance += F.pairwise_distance(output1, i)
+        euclidean_distance = F.pairwise_distance(output1, output2)
 
-        if task == True:
-          print('ed {}'.format(euclidean_distance))
+       # if task == True:
+      #    print('ed {}'.format(euclidean_distance))
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
@@ -31,7 +29,7 @@ class ContrastiveLoss(torch.nn.Module):
 def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-2, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -73,7 +71,6 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for i, index in enumerate(ind):
-            print('i is {}'.format(i))
 
             seed = (epoch+1) * (index+1)
             img1, img2, labels, base = train_dataset.__getitem__(index, seed, base_ind)
@@ -93,23 +90,10 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
             else:
               output2 = model.forward(img2.float())
 
-
-            vectors = []
-            for j in range(0, len(ind)):
-              if i != j:
-                if ind[j] == base_ind:
-                  vectors.append(feat1)
-                else:
-                  vectors.append(model(train_dataset.__getitem__(ind[j], seed, base_ind)[0].to(device).float()))
-
-
-
-
-
         #    if i == 3:
         #      loss = criterion(output1,output2,feat1,labels,True)
         #    else:
-            loss = criterion(output1,vectors,labels,True)
+            loss = criterion(output1,output2,labels,True)
 
             loss_sum+= loss.item()
             # Backward and optimize
