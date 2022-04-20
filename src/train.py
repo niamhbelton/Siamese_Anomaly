@@ -26,10 +26,10 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze):
+def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.1)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -205,6 +205,7 @@ def parse_arguments():
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
+    parser.add_argument('--lr', type=float)
     parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
     parser.add_argument('--freeze', default = True)
@@ -232,6 +233,7 @@ if __name__ == '__main__':
     contamination = args.contamination
     indexes = args.index
     alpha = args.alpha
+    lr = args.lr
     task = 'train'
 
     if indexes != []:
@@ -273,4 +275,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze)
+    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze)
