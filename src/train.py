@@ -16,9 +16,9 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, output2, label, task=False):
+    def forward(self, output1, output2, feat1, label, alpha, task=False):
 
-        euclidean_distance = F.pairwise_distance(output1, output2)
+        euclidean_distance = F.pairwise_distance(output1, output2) + (alpha*F.pairwise_distance(output1, feat1))
 
        # if task == True:
       #    print('ed {}'.format(euclidean_distance))
@@ -26,7 +26,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze):
+def train(model, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=1e-5, weight_decay=0.1)
@@ -93,7 +93,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
         #    if i == 3:
         #      loss = criterion(output1,output2,feat1,labels,True)
         #    else:
-            loss = criterion(output1,output2,labels,True)
+            loss = criterion(output1,output2,feat1,labels,alpha,True)
 
             loss_sum+= loss.item()
             # Backward and optimize
@@ -119,7 +119,7 @@ def train(model, train_dataset, val_dataset, epochs, criterion, model_name, inde
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
-        val_auc, val_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion)
+        val_auc, val_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -206,6 +206,7 @@ def parse_arguments():
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--alpha', type=float, default = 0)
     parser.add_argument('--freeze', default = True)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
@@ -230,6 +231,7 @@ if __name__ == '__main__':
     download_data = args.download_data
     contamination = args.contamination
     indexes = args.index
+    alpha = args.alpha
     task = 'train'
 
     if indexes != []:
@@ -271,4 +273,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model, train_dataset, val_dataset, epochs, criterion, model_name, indexes, data_path, normal_class, dataset_name, freeze)
+    train(model, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze)

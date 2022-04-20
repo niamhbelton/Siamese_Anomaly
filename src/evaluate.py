@@ -27,7 +27,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion):
+def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha):
 
     model.eval()
 
@@ -93,7 +93,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         test_vectors.append(out.detach().cpu().numpy().tolist())
 
         for j in range(0, len(indexes)):
-            euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)])
+            euclidean_distance = F.pairwise_distance(out, ref_images['images{}'.format(j)]) + (0.5*F.pairwise_distance(out, feat1))
           #  euclidean_distance2 = F.pairwise_distance(out, ref_images2['images{}'.format(j)])
             outs['outputs{}'.format(j)].append(euclidean_distance.item())
           #  outs2['outputs{}'.format(j)].append(euclidean_distance2.item())
@@ -110,7 +110,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
        # if i % 100 == 0:
        #   print(label)
-            loss_sum += criterion(out,ref_images['images{}'.format(j)], feat1,label, True)
+            loss_sum += criterion(out,ref_images['images{}'.format(j)], feat1,label, alpha,True)
        # else:
        #   loss_sum += criterion(out,f, label)
 
