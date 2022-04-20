@@ -18,15 +18,15 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, output1, output2, feat1, label, alpha, task=False):
 
-        euclidean_distance = F.pairwise_distance(output1, output2) + (alpha*F.pairwise_distance(output1, feat1))
-
+        euclidean_distance = (F.pairwise_distance(output1, output2) + (alpha*F.pairwise_distance(output1, feat1))
+)
        # if task == True:
       #    print('ed {}'.format(euclidean_distance))
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze):
+def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.1)
@@ -60,7 +60,11 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
     rand_freeze = np.random.randint(len(indexes) )
     base_ind = ind[rand_freeze]
 
-    print(freeze)
+    dictionary={}
+    for i in range(0, len(ind)):
+      dictionary[i] = []
+
+
     if freeze == True:
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
@@ -85,15 +89,42 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
             else:
               output1 = model.forward(img1.float())
 
-            if (freeze == True) & (base == True):
-              output2 = feat1
+            if smart_samp == 0:
+              if (freeze == True) & (base == True):
+                output2 = feat1
+              else:
+                output2 = model.forward(img2.float())
+
+              loss = criterion(output1,output2,feat1,labels,alpha,True)
+
             else:
-              output2 = model.forward(img2.float())
+              max_euclidean_distance =0
+              max_ind =-1
+              vectors=[]
+              for j in range(0, len(ind)):
+                if ind[j] == base_ind:
+                  vectors.append(feat1)
+                  euclidean_distance = F.pairwise_distance(output1, feat1)
+                else:
+                  output2=model(train_dataset.__getitem__(ind[j], seed, base_ind)[0].to(device).float())
+                  vectors.append(output2)
+                  euclidean_distance = F.pairwise_distance(output1, output2)
+                if smart_samp == 1:
+                  if (euclidean_distance > max_euclidean_distance):
+                    max_euclidean_distance = euclidean_distance
+                    max_ind = j
+                else:
+                  if (euclidean_distance > max_euclidean_distance) & (j not in dictionary[index]):
+                    max_euclidean_distance = euclidean_distance
+                    max_ind = j
+
+              dictionary[index].append(max_ind)
+              loss = criterion(output1,vectors[max_ind],feat1,labels,alpha,True)
+
 
         #    if i == 3:
         #      loss = criterion(output1,output2,feat1,labels,True)
         #    else:
-            loss = criterion(output1,output2,feat1,labels,alpha,True)
 
             loss_sum+= loss.item()
             # Backward and optimize
@@ -209,6 +240,7 @@ def parse_arguments():
     parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
     parser.add_argument('--freeze', default = True)
+    parser.add_argument('--smart_samp', type = int, choices = [0,1,2], default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -234,6 +266,7 @@ if __name__ == '__main__':
     indexes = args.index
     alpha = args.alpha
     lr = args.lr
+    smart_samp = args.smart_samp
     task = 'train'
 
     if indexes != []:
@@ -275,4 +308,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze)
+    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp)
