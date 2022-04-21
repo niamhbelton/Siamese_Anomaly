@@ -110,7 +110,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
        # if i % 100 == 0:
        #   print(label)
-            loss_sum += criterion(out,ref_images['images{}'.format(j)], feat1,label, alpha,True)
+            loss_sum += criterion(out,[ref_images['images{}'.format(j)]], feat1,label, alpha,True)
        # else:
        #   loss_sum += criterion(out,f, label)
 

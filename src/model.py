@@ -286,6 +286,7 @@ class cifar_lenet(nn.Module):
 
 
       self.classifier = nn.Linear(2880, 1024,bias=False)
+      self.act5 = nn.LeakyReLU()
       self.drop = nn.Dropout(p=0.5)
       self.classifier2 = nn.Linear(1024, 512,bias=False)
 
@@ -320,6 +321,7 @@ class cifar_lenet(nn.Module):
 
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
+      x = self.act5(x)
       x = self.drop(x)
       x = self.classifier2(x)
       return x #output

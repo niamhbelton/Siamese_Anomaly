@@ -16,17 +16,27 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, output2, feat1, label, alpha, task=False):
+    def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
+        euclidean_distance = torch.FloatTensor([0]).cuda()
+        if weight == True:
+          eds=[]
+          for i in vectors:
+            eds.append(F.pairwise_distance(i, feat1))
 
-        euclidean_distance = (F.pairwise_distance(output1, output2) + (alpha*F.pairwise_distance(output1, feat1))
-)
-       # if task == True:
-      #    print('ed {}'.format(euclidean_distance))
+          for i,dist in enumerate(eds):
+            euclidean_distance += ((1-(dist/sum(eds))) * F.pairwise_distance(output1, vectors[i]))
+
+          euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
+        else:
+          for i in vectors:
+            #sum all the distances, weight them that way, how do you weight the distance then from the centre
+            euclidean_distance += ((F.pairwise_distance(output1, i) + ((alpha*F.pairwise_distance(output1, feat1)))))
+
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp):
+def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.1)
@@ -98,6 +108,8 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
               loss = criterion(output1,output2,feat1,labels,alpha,True)
 
             else:
+              max_eds = [0] * k
+              max_inds = [-1] * k
               max_euclidean_distance =0
               max_ind =-1
               vectors=[]
@@ -110,16 +122,25 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
                   vectors.append(output2)
                   euclidean_distance = F.pairwise_distance(output1, output2)
                 if smart_samp == 1:
-                  if (euclidean_distance > max_euclidean_distance):
-                    max_euclidean_distance = euclidean_distance
-                    max_ind = j
+                  for b, vec in enumerate(max_eds):
+                    if euclidean_distance > vec:
+                      max_eds.insert(b, euclidean_distance)
+                      max_inds.insert(b, j)
+                      if len(max_eds) > k:
+                        max_eds.pop()
+                        max_inds.pop()
+                      break
+
+
                 else:
                   if (euclidean_distance > max_euclidean_distance) & (j not in dictionary[index]):
                     max_euclidean_distance = euclidean_distance
                     max_ind = j
 
               dictionary[index].append(max_ind)
-              loss = criterion(output1,vectors[max_ind],feat1,labels,alpha,True)
+          #    print(max_inds)
+          #    print(vectors[[max_inds]])
+              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight,True)
 
 
         #    if i == 3:
@@ -238,9 +259,12 @@ def parse_arguments():
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--lr', type=float)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--weight_init_seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
     parser.add_argument('--freeze', default = True)
     parser.add_argument('--smart_samp', type = int, choices = [0,1,2], default = 0)
+    parser.add_argument('--weight', type = bool, default = False)
+    parser.add_argument('--k', type = int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
@@ -267,6 +291,9 @@ if __name__ == '__main__':
     alpha = args.alpha
     lr = args.lr
     smart_samp = args.smart_samp
+    k = args.k
+    weight = args.weight
+    weight_init_seed = args.weight_init_seed
     task = 'train'
 
     if indexes != []:
@@ -278,8 +305,11 @@ if __name__ == '__main__':
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
 
+
+    torch.manual_seed(weight_init_seed)
+    torch.cuda.manual_seed(weight_init_seed)
+    torch.cuda.manual_seed_all(weight_init_seed)
     if model_type == 'LeNet_Avg':
-        print('here')
         model = LeNet_Avg()
     elif model_type == 'LeNet_Max':
         model = LeNet_Max()
@@ -308,4 +338,4 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp)
+    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
