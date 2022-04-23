@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, cifar_lenet_red
 import os
 import numpy as np
 import pandas as pd
@@ -29,8 +29,9 @@ class ContrastiveLoss(torch.nn.Module):
           euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
         else:
           for i in vectors:
-            #sum all the distances, weight them that way, how do you weight the distance then from the centre
-            euclidean_distance += ((F.pairwise_distance(output1, i) + ((alpha*F.pairwise_distance(output1, feat1)))))
+            euclidean_distance += F.pairwise_distance(output1, i) #+ ((alpha*F.pairwise_distance(output1, feat1)))))
+          euclidean_distance += alpha*F.pairwise_distance(output1, feat1)
+
 
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
@@ -53,8 +54,10 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
 
     best_val_auc = 0
     best_epoch = -1
+    best_val_auc_min = 0
+    best_epoch_min = -1
     early_stop_iter = 0
-    max_iter = 10
+    max_iter = 5
     stop_training =False
     ind = list(range(0, len(indexes)))
 
@@ -140,7 +143,7 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
               dictionary[index].append(max_ind)
           #    print(max_inds)
           #    print(vectors[[max_inds]])
-              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight,True)
+              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight,True)
 
 
         #    if i == 3:
@@ -153,25 +156,11 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
             loss.backward(retain_graph=True)
             optimizer.step()
 
-        #analysis of weights
-    #    total_abs = 0
-    #    total = 0
-    #    num_params=0
-    #    for p in model.parameters():
-    #        n = p.cpu().data.numpy()
-    #        num_params += len(n.flatten())
-    #        total_abs += np.sum(np.abs(n))
-    #        total += np.sum(n)
 
-    #    weight_totals.append(total)
-    #    weight_means.append(total / num_params)
-
-    #    print('Absolute value of weights {}'.format(total_abs))
-    #    print('Mean weight value {}'.format(total / num_params))
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'validate'
-        val_auc, val_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
+        val_auc, val_loss, val_auc_min, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -181,17 +170,34 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
         print("Validation loss: {}".format(val_losses[-1]))
         print('AUC is {}'.format(aucs[-1]))
 
+
         scheduler.step(val_loss)
+        best_model=False
         if val_auc > best_val_auc:
           best_val_auc = val_auc
           best_epoch = epoch+1
           early_stop_iter = 0
-          model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
+          best_model=True
+          model_name_temp = model_name + '_mean_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
           for f in os.listdir('./outputs/models/'):
-            if model_name in f :
+            if (model_name in f) & ('mean' in f) :
                 os.remove(f'./outputs/models/{f}')
           torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
-        else:
+
+
+        if val_auc_min > best_val_auc_min :
+          best_val_auc_min = val_auc_min
+          best_epoch_min = epoch+1
+
+          early_stop_iter = 0
+          best_model=True
+          model_name_temp = model_name + '_minimum_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc_min, 3))
+          for f in os.listdir('./outputs/models/'):
+            if (model_name in f) & ('minimum' in f):
+                os.remove(f'./outputs/models/{f}')
+          torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
+
+        if best_model==False:
           early_stop_iter += 1
           if early_stop_iter == max_iter:
             stop_training = True
@@ -253,7 +259,7 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet', 'MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet','cifar_lenet_red', 'MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
@@ -325,6 +331,8 @@ if __name__ == '__main__':
 #        model = Net()
     elif model_type == 'cifar_lenet':
         model = cifar_lenet()
+    elif model_type == 'cifar_lenet_red':
+        model = cifar_lenet_red()
 #    elif model_type == 'MNIST_LeNet':
 #        model = MNIST_LeNet()
 #    elif model_type == 'LeNet5':

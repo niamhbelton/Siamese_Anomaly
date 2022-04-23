@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, cifar_lenet_red
 import os
 import numpy as np
 import pandas as pd
@@ -12,20 +12,7 @@ import random
 
 
 
-class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, margin=2.0):
-        super(ContrastiveLoss, self).__init__()
-        self.margin = margin
 
-    def forward(self, output1, output2, label, task=False):
-
-        euclidean_distance = F.pairwise_distance(output1, output2)
-
-       # if task == True:
-      #    print('ed {}'.format(euclidean_distance))
-
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive
 
 def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha):
 
@@ -145,9 +132,9 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     df.to_csv('./outputs/ED/' +output_name)
 
     if task != 'train':
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['mean2'])))
-        auc = metrics.auc(fpr, tpr)
-        print('AUC based on frozen vector {}'.format(auc))
+        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['minimum_dists'])))
+        auc_min = metrics.auc(fpr, tpr)
+        print('AUC based on minimum vector {}'.format(auc_min))
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means'])))
         auc = metrics.auc(fpr, tpr)
     #    print('AUC based on mean distance to reference images {}'.format(auc))
@@ -155,7 +142,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     #    auc = metrics.auc(fpr, tpr)
 
     avg_loss = (loss_sum.item() / len(indexes) )/ val_dataset.__len__()
-    return auc, avg_loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
+    return auc, avg_loss, auc_min, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors
 
 
 def softmax(x, axis=None):
@@ -185,6 +172,8 @@ def parse_arguments():
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
+    parser.add_argument('--alpha', type=float, default = 0)
+
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -193,7 +182,8 @@ def parse_arguments():
 
 if __name__ == '__main__':
 
-    from train import *
+    from train import ContrastiveLoss
+    from train import init_feat_vec
 
     args = parse_arguments()
     model_name = args.model_name
@@ -206,6 +196,7 @@ if __name__ == '__main__':
     N = args.num_ref
     seed=args.seed
     indexes = args.index
+    alpha = args.alpha
 
 
     if indexes != []:
@@ -242,6 +233,6 @@ if __name__ == '__main__':
     rand_freeze = np.random.randint(len(indexes) )
     base_ind = ind[rand_freeze]
     feat1 = init_feat_vec(model,base_ind, ref_dataset )
-    auc, loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion)
+    auc, loss, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion, alpha)
 
     print('AUC is {}'.format(auc))

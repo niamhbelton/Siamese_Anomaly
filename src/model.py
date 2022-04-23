@@ -300,19 +300,19 @@ class cifar_lenet(nn.Module):
 
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
-      x = F.pad(x, (0, 0, 2, 1))
+      x = F.pad(x, (0, 0, 1, 1))
       x = self.conv1(x)
       x = self.bn1(x)
       x = self.act(x)
-      x = F.pad(x, (0, 0, 2, 1))
+      x = F.pad(x, (0, 0, 1, 1))
       x = self.conv2(x)
       x = self.act2(x)
       x= self.pool(x)
 
-      x = F.pad(x, (0, 0, 2, 1))
+      x = F.pad(x, (0, 0, 1, 1))
       x = self.conv3(x)
       x = self.act3(x)
-      x = F.pad(x, (0, 0, 2, 1))
+      x = F.pad(x, (0, 0, 1, 1))
       x = self.conv4(x)
       x = self.act4(x)
       x= self.pool2(x)
