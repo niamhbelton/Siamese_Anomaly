@@ -350,5 +350,6 @@ class cifar_lenet(nn.Module):
       x = self.act5(x)
       x = self.drop(x)
       x = self.classifier2(x)
+      x = nn.Sigmoid()(x)
 
       return x #output

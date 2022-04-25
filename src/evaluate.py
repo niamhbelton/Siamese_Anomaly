@@ -14,7 +14,7 @@ import random
 
 
 
-def evaluate(max_ed, min_value,feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha):
+def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha):
 
     model.eval()
 
@@ -80,7 +80,7 @@ def evaluate(max_ed, min_value,feat1, base_ind, ref_dataset, val_dataset, model,
 
 
         for j in range(0, len(indexes)):
-            euclidean_distance = (F.pairwise_distance(out, ref_images['images{}'.format(j)]) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) ) + (alpha*(F.pairwise_distance(out, feat1) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) ))
+            euclidean_distance = (F.pairwise_distance(out, ref_images['images{}'.format(j)]) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() ) + (alpha*(F.pairwise_distance(out, feat1) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() ))
           #  print('after ed {}'.format(torch.cuda.memory_reserved(0)/10000))
             outs['outputs{}'.format(j)].append(euclidean_distance.item())
             sum += euclidean_distance.item()

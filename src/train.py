@@ -32,17 +32,10 @@ class ContrastiveLoss(torch.nn.Module):
           euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
         else:
           for i in vectors:
-            ed1 = F.pairwise_distance(output1, i).item()
-            ed2 = F.pairwise_distance(output1, feat1).item()
-            if ed1 > max_ed:
-              max_ed= ed1
-            elif ed2 > max_ed:
-              max_ed = ed2
-        #    euclidean_distance += (F.pairwise_distance(output1, i)) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) #+ ((alpha*F.pairwise_distance(output1, feat1)))))
-            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda())  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
+            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda())  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
 
            # print('ed is {}'.format(euclidean_distance))
-          euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) )
+          euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() )
 
 
 
@@ -94,27 +87,6 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
 
-    max_ed =0
-    min_value=10000000000000
-    for i in range(0, len(indexes)):
-      for j in range(0, len(indexes)):
-        if i != j:
-          seed=1
-          img1, _,_,_ = train_dataset.__getitem__(i, seed, base_ind)
-          if (freeze == True) & (i ==base_ind):
-              output1 = feat1
-          else:
-            output1 = model.forward(img1.cuda().float())
-          img2, _,_,_ = train_dataset.__getitem__(j, seed, base_ind)
-          if (freeze == True) & (j ==base_ind):
-              output2 = feat1
-          else:
-            output2 = model.forward(img2.cuda().float())
-          euclidean_distance = F.pairwise_distance(output1, output2).item()
-          if euclidean_distance > max_ed:
-            max_ed = euclidean_distance
-          if euclidean_distance < min_value:
-            min_value = euclidean_distance
 
     for epoch in range(epochs):
 
@@ -194,7 +166,7 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'test'
-        val_auc, val_loss, val_auc_min = evaluate(max_ed, min_value,feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
+        val_auc, val_loss, val_auc_min = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
