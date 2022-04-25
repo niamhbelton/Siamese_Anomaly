@@ -1,6 +1,8 @@
+
+
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet, cifar_lenet_red
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
 import os
 import numpy as np
 import pandas as pd
@@ -16,8 +18,9 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
+    def forward(self, output1, vectors, feat1, label, alpha, max_ed, min_value,weight=False, task=False):
         euclidean_distance = torch.FloatTensor([0]).cuda()
+        min_value=0
         if weight == True:
           eds=[]
           for i in vectors:
@@ -29,13 +32,22 @@ class ContrastiveLoss(torch.nn.Module):
           euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
         else:
           for i in vectors:
-            euclidean_distance += F.pairwise_distance(output1, i) #+ ((alpha*F.pairwise_distance(output1, feat1)))))
-          euclidean_distance += alpha*F.pairwise_distance(output1, feat1)
+            ed1 = F.pairwise_distance(output1, i).item()
+            ed2 = F.pairwise_distance(output1, feat1).item()
+            if ed1 > max_ed:
+              max_ed= ed1
+            elif ed2 > max_ed:
+              max_ed = ed2
+        #    euclidean_distance += (F.pairwise_distance(output1, i)) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) #+ ((alpha*F.pairwise_distance(output1, feat1)))))
+            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda())  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
+
+           # print('ed is {}'.format(euclidean_distance))
+          euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.max(torch.Tensor([max_ed]).cuda(), torch.Tensor([0.05]).cuda()) )
 
 
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive
+        return loss_contrastive, max_ed
 
 def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
     device='cuda'
@@ -81,10 +93,37 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
     if freeze == True:
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
+
+    max_ed =0
+    min_value=10000000000000
+    for i in range(0, len(indexes)):
+      for j in range(0, len(indexes)):
+        if i != j:
+          seed=1
+          img1, _,_,_ = train_dataset.__getitem__(i, seed, base_ind)
+          if (freeze == True) & (i ==base_ind):
+              output1 = feat1
+          else:
+            output1 = model.forward(img1.cuda().float())
+          img2, _,_,_ = train_dataset.__getitem__(j, seed, base_ind)
+          if (freeze == True) & (j ==base_ind):
+              output2 = feat1
+          else:
+            output2 = model.forward(img2.cuda().float())
+          euclidean_distance = F.pairwise_distance(output1, output2).item()
+          if euclidean_distance > max_ed:
+            max_ed = euclidean_distance
+          if euclidean_distance < min_value:
+            min_value = euclidean_distance
+
     for epoch in range(epochs):
+
+
         model.train()
         loss_sum = 0
         print("Starting epoch " + str(epoch+1))
+
+
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for i, index in enumerate(ind):
@@ -108,7 +147,10 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
               else:
                 output2 = model.forward(img2.float())
 
-              loss = criterion(output1,output2,feat1,labels,alpha,True)
+           #   print('outupt 1 {}'.format(output1))
+            #  print('outupt 2 {}'.format(output2))
+
+              loss,max_ed = criterion(output1,output2,feat1,labels,alpha,max_ed,min_value,weight=weight)
 
             else:
               max_eds = [0] * k
@@ -141,14 +183,8 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
                     max_ind = j
 
               dictionary[index].append(max_ind)
-          #    print(max_inds)
-          #    print(vectors[[max_inds]])
-              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight,True)
+              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight)
 
-
-        #    if i == 3:
-        #      loss = criterion(output1,output2,feat1,labels,True)
-        #    else:
 
             loss_sum+= loss.item()
             # Backward and optimize
@@ -156,11 +192,9 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
             loss.backward(retain_graph=True)
             optimizer.step()
 
-
-
         output_name = model_name + '_output_epoch_' + str(epoch+1)
-        task = 'validate'
-        val_auc, val_loss, val_auc_min, vec_sum, vec_mean, feature_vectors, feature_vectors2, test_vectors = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
+        task = 'test'
+        val_auc, val_loss, val_auc_min = evaluate(max_ed, min_value,feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -204,19 +238,8 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
 
 
 
-        if (i % 20 == 0) | (stop_training == True):
-
-          for f in os.listdir('graph_data'):
-            if model_name in f :
-                os.remove(f'./graph_data/{f}')
-          pd.concat([pd.DataFrame(weight_totals), pd.DataFrame(weight_means), pd.DataFrame(train_losses),pd.DataFrame(val_losses), pd.DataFrame(aucs)], axis =1).to_csv('./graph_data/' + model_name + '_epoch_' + str(epoch+1))
-          pd.concat([pd.DataFrame(vec_sum, columns = ['sum_abs_vals']),pd.DataFrame(vec_mean, columns = ['mean_vals']),feature_vectors ], axis =1).to_csv('./graph_data/vectors_' + output_name)
-          pd.concat([pd.DataFrame(vec_sum, columns = ['sum_abs_vals']),pd.DataFrame(vec_mean, columns = ['mean_vals']),feature_vectors2 ], axis =1).to_csv('./graph_data/vectors_orig_' + output_name)
-          test_vectors.to_csv('./graph_data/test_vectors_' + output_name)
-
-
-        if stop_training:
-          break
+          if stop_training:
+            break
 
 
     print("Finished Training")
@@ -309,7 +332,7 @@ if __name__ == '__main__':
 
 
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
-    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
+    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'test', data_path, download_data=False)
 
 
     torch.manual_seed(weight_init_seed)

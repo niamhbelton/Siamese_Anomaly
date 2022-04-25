@@ -242,7 +242,6 @@ class LeNet5(nn.Module):
         return x
 
 
-
 class cifar_lenet(nn.Module):
   def __init__(self):
       super(cifar_lenet, self).__init__()
@@ -285,11 +284,29 @@ class cifar_lenet(nn.Module):
       self.pool2 = nn.MaxPool2d(kernel_size=2)
 
 
-      self.classifier = nn.Linear(2880, 1024,bias=False)
+      self.conv5 =nn.Conv2d(
+              in_channels=64,
+              out_channels=128,
+              kernel_size=3,
+              stride=1,
+              padding=0,bias=False
+          )
+      self.act5 = nn.LeakyReLU()
+      self.conv6 =nn.Conv2d(
+              in_channels=128,
+              out_channels=128,
+              kernel_size=3,
+              stride=1,
+              padding=0,bias=False
+          )
+      self.act6 = nn.LeakyReLU()
+      self.pool3 = nn.MaxPool2d(kernel_size=2)
+
+
+      self.classifier = nn.Linear(2048, 1024,bias=False)
       self.act5 = nn.LeakyReLU()
       self.drop = nn.Dropout(p=0.5)
       self.classifier2 = nn.Linear(1024, 512,bias=False)
-
 
       # self.classifier = nn.Linear(1568, 512)
 
@@ -300,22 +317,31 @@ class cifar_lenet(nn.Module):
 
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
-      x = F.pad(x, (0, 0, 1, 1))
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
+     # x = F.pad(x, (0, 0,0,0,0,0, 1, 1, 1,1))
       x = self.conv1(x)
       x = self.bn1(x)
       x = self.act(x)
-      x = F.pad(x, (0, 0, 1, 1))
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
       x = self.conv2(x)
       x = self.act2(x)
       x= self.pool(x)
 
-      x = F.pad(x, (0, 0, 1, 1))
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
       x = self.conv3(x)
       x = self.act3(x)
-      x = F.pad(x, (0, 0, 1, 1))
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
       x = self.conv4(x)
       x = self.act4(x)
       x= self.pool2(x)
+
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
+      x = self.conv5(x)
+      x = self.act5(x)
+      x = F.pad(x, (1,1,1,1, 0, 0,0,0))
+      x = self.conv6(x)
+      x = self.act6(x)
+      x= self.pool3(x)
 
 
 
@@ -324,4 +350,5 @@ class cifar_lenet(nn.Module):
       x = self.act5(x)
       x = self.drop(x)
       x = self.classifier2(x)
+
       return x #output
