@@ -90,8 +90,8 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
             if euclidean_distance.item() > maxi:
               maxi = euclidean_distance.item()
 
-            l,_ = criterion(out,[ref_images['images{}'.format(j)]], feat1,label, alpha,weight=False)
-            loss_sum += l.item()
+            loss_sum += = criterion(out,[ref_images['images{}'.format(j)]], feat1,label, alpha,weight=False)
+
         minimum_dists.append(mini)
         means.append(sum/len(indexes))
         means2.append(mini2)
