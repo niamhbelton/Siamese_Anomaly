@@ -80,7 +80,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
 
         for j in range(0, len(indexes)):
-            euclidean_distance = (F.pairwise_distance(out, ref_images['images{}'.format(j)]) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() ) + (alpha*(F.pairwise_distance(out, feat1) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() ))
+            euclidean_distance = (F.pairwise_distance(out, ref_images['images{}'.format(j)]) / torch.sqrt(torch.Tensor([out.size()[1]])).cuda() ) + (alpha*(F.pairwise_distance(out, feat1) /torch.sqrt(torch.Tensor([out.size()[1]])).cuda() ))
           #  print('after ed {}'.format(torch.cuda.memory_reserved(0)/10000))
             outs['outputs{}'.format(j)].append(euclidean_distance.item())
             sum += euclidean_distance.item()
@@ -90,7 +90,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
             if euclidean_distance.item() > maxi:
               maxi = euclidean_distance.item()
 
-            l,_ = criterion(out,[ref_images['images{}'.format(j)]], feat1,label, alpha,max_ed, min_value,weight=False)
+            l,_ = criterion(out,[ref_images['images{}'.format(j)]], feat1,label, alpha,weight=False)
             loss_sum += l.item()
         minimum_dists.append(mini)
         means.append(sum/len(indexes))

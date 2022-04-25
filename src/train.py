@@ -18,7 +18,7 @@ class ContrastiveLoss(torch.nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
 
-    def forward(self, output1, vectors, feat1, label, alpha, max_ed, min_value,weight=False, task=False):
+    def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
         euclidean_distance = torch.FloatTensor([0]).cuda()
         min_value=0
         if weight == True:
@@ -32,7 +32,7 @@ class ContrastiveLoss(torch.nn.Module):
           euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
         else:
           for i in vectors:
-            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda())  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
+            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
 
            # print('ed is {}'.format(euclidean_distance))
           euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() )
@@ -40,7 +40,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
-        return loss_contrastive, max_ed
+        return loss_contrastive
 
 def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
     device='cuda'
@@ -122,7 +122,7 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
            #   print('outupt 1 {}'.format(output1))
             #  print('outupt 2 {}'.format(output2))
 
-              loss,max_ed = criterion(output1,output2,feat1,labels,alpha,max_ed,min_value,weight=weight)
+              loss = criterion(output1,output2,feat1,labels,alpha,weight=weight)
 
             else:
               max_eds = [0] * k
