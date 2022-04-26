@@ -135,6 +135,7 @@ class MNIST(data.Dataset):
 
         base=False
         img, target = self.data[index], int(self.targets[index])
+        img = torch.stack((img,img,img),0)
     #    img = img / 255
 
         if self.task == 'train':
@@ -150,6 +151,7 @@ class MNIST(data.Dataset):
               base = True
 
             img2, target2 = self.data[ind], int(self.targets[ind])
+            img2 = torch.stack((img2,img2,img2),0)
         #    img2 = img2 / 255
             label = torch.FloatTensor([0])
         else:

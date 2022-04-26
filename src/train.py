@@ -1,5 +1,3 @@
-
-
 import torch
 from datasets.main import load_dataset
 from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
@@ -21,13 +19,16 @@ class ContrastiveLoss(torch.nn.Module):
     def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
         euclidean_distance = torch.FloatTensor([0]).cuda()
         min_value=0
-         if weight == True:
+        if weight == True:
           eds=[]
           for i in vectors:
             eds.append(F.pairwise_distance(i, feat1))
 
+
+      #    print(eds)
           for i,dist in enumerate(eds):
             euclidean_distance += ((1-(dist/sum(eds))) * (F.pairwise_distance(output1, vectors[i])) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda())
+      #      print('weight {} is {}'.format(i, (1-(dist/sum(eds)))))
 
           euclidean_distance += (alpha*(F.pairwise_distance(output1, feat1) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()))
 
@@ -131,30 +132,32 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
               max_euclidean_distance =0
               max_ind =-1
               vectors=[]
+              c=0
               for j in range(0, len(ind)):
-                if ind[j] == base_ind:
-                  vectors.append(feat1)
-                  euclidean_distance = F.pairwise_distance(output1, feat1)
-                else:
+                if (ind[j] != base_ind) & (index != ind[j]):
                   output2=model(train_dataset.__getitem__(ind[j], seed, base_ind)[0].to(device).float())
                   vectors.append(output2)
                   euclidean_distance = F.pairwise_distance(output1, output2)
-                if smart_samp == 1:
-                  for b, vec in enumerate(max_eds):
-                    if euclidean_distance > vec:
-                      max_eds.insert(b, euclidean_distance)
-                      max_inds.insert(b, j)
-                      if len(max_eds) > k:
-                        max_eds.pop()
-                        max_inds.pop()
-                      break
+                  if smart_samp == 1:
+                    for b, vec in enumerate(max_eds):
+                      if euclidean_distance > vec:
+                        max_eds.insert(b, euclidean_distance)
+                        max_inds.insert(b, len(vectors)-1)
+                        if len(max_eds) > k:
+                          max_eds.pop()
+                          max_inds.pop()
+                        break
 
 
-                else:
-                  if (euclidean_distance > max_euclidean_distance) & (j not in dictionary[index]):
-                    max_euclidean_distance = euclidean_distance
-                    max_ind = j
+                  else:
+                    if (euclidean_distance > max_euclidean_distance) & (j not in dictionary[index]):
+                      max_euclidean_distance = euclidean_distance
+                      max_ind = j
 
+          #    print(len(vectors))
+           #   print(len(max_inds))
+            #  print(len(max_eds))
+             # print(max_inds)
               dictionary[index].append(max_ind)
               loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight)
 
