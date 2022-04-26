@@ -21,15 +21,16 @@ class ContrastiveLoss(torch.nn.Module):
     def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
         euclidean_distance = torch.FloatTensor([0]).cuda()
         min_value=0
-        if weight == True:
+         if weight == True:
           eds=[]
           for i in vectors:
             eds.append(F.pairwise_distance(i, feat1))
 
           for i,dist in enumerate(eds):
-            euclidean_distance += ((1-(dist/sum(eds))) * F.pairwise_distance(output1, vectors[i]))
+            euclidean_distance += ((1-(dist/sum(eds))) * (F.pairwise_distance(output1, vectors[i])) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda())
 
-          euclidean_distance += (alpha*F.pairwise_distance(output1, feat1))
+          euclidean_distance += (alpha*(F.pairwise_distance(output1, feat1) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()))
+
         else:
           for i in vectors:
             euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()  #+ ((alpha*F.pairwise_distance(output1, feat1)))))

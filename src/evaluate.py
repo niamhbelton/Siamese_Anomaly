@@ -63,7 +63,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         if i % 1000 == 0:
           print(i)
 
-        if i == 5000:
+        if i == 1000:
           break
 
         image = data[0][0]
