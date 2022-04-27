@@ -64,7 +64,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
     best_val_auc_min = 0
     best_epoch_min = -1
     early_stop_iter = 0
-    max_iter = 5
+    max_iter = 3
     stop_training =False
     ind = list(range(0, len(indexes)))
 
