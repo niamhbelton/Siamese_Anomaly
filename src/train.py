@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, cifar_lenet
+from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, CIFAR_VGG3, MNIST_VGG3
 import os
 import numpy as np
 import pandas as pd
@@ -44,10 +44,10 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
+def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
     device='cuda'
     model.cuda()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=0.1)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
     if not os.path.exists('outputs'):
@@ -116,6 +116,7 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
               output1 = model.forward(img1.float())
 
             if smart_samp == 0:
+
               if (freeze == True) & (base == True):
                 output2 = feat1
               else:
@@ -170,7 +171,7 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'test'
-        val_auc, val_loss, val_auc_min = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, indexes, data_path, criterion, alpha)
+        val_auc, val_loss, val_auc_min, df = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -193,6 +194,11 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
             if (model_name in f) & ('mean' in f) :
                 os.remove(f'./outputs/models/{f}')
           torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
+          for f in os.listdir('./outputs/ED/'):
+            if (model_name in f) & ('mean' in f) :
+                os.remove(f'./outputs/ED/{f}')
+          df.to_csv('./outputs/ED/' +model_name_temp)
+
 
 
         if val_auc_min > best_val_auc_min :
@@ -206,20 +212,22 @@ def train(model, lr, train_dataset, val_dataset, epochs, criterion, alpha, model
             if (model_name in f) & ('minimum' in f):
                 os.remove(f'./outputs/models/{f}')
           torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
+          for f in os.listdir('./outputs/ED/'):
+            if (model_name in f) & ('minimum' in f) :
+                os.remove(f'./outputs/ED/{f}')
+          df.to_csv('./outputs/ED/' +model_name_temp)
 
         if best_model==False:
           early_stop_iter += 1
           if early_stop_iter == max_iter:
-            stop_training = True
-
-
-
-          if stop_training:
             break
 
 
     print("Finished Training")
     print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
+
+
+    return best_val_auc, best_epoch, best_val_auc_min, best_epoch_min
 
 
 
@@ -258,11 +266,13 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'cifar_lenet','cifar_lenet_red', 'MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'CIFAR_VGG3','MNIST_VGG3','MNIST_LeNet', 'LeNet5'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--lr', type=float)
+    parser.add_argument('--vector_size', type=int, default=1024)
+    parser.add_argument('--weight_decay', type=float, default=0.1)
     parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('--weight_init_seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
@@ -295,6 +305,8 @@ if __name__ == '__main__':
     indexes = args.index
     alpha = args.alpha
     lr = args.lr
+    vector_size = args.vector_size
+    weight_decay = args.weight_decay
     smart_samp = args.smart_samp
     k = args.k
     weight = args.weight
@@ -328,21 +340,18 @@ if __name__ == '__main__':
         model = LeNet_Drop()
 #    if model_type == 'Net':
 #        model = Net()
-    elif model_type == 'cifar_lenet':
-        model = cifar_lenet()
-    elif model_type == 'cifar_lenet_red':
-        model = cifar_lenet_red()
-#    elif model_type == 'MNIST_LeNet':
-#        model = MNIST_LeNet()
-#    elif model_type == 'LeNet5':
-#        model = LeNet5()
-#    elif model_type == 'Net_Max':
-#        model = Net_Max()
-#    else:
-#        model = Net_simp()
+    elif model_type == 'CIFAR_VGG3':
+        model = CIFAR_VGG3(vector_size)
+    elif model_type == 'MNIST_VGG3':
+        model = MNIST_VGG3(vector_size)
+
 
 
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    train(model,lr, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
+    auc, epoch, auc_min, epoch_min = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
+
+    cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'AUC', 'epoch', 'AUC_min', 'epoch_min']
+    params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, auc, epoch, auc_min, epoch_min]
+    pd.DataFrame([params], columns = cols).to_csv('./outputs/'+model_name)
