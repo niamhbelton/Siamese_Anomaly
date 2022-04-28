@@ -354,4 +354,8 @@ if __name__ == '__main__':
 
     cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'AUC', 'epoch', 'AUC_min', 'epoch_min']
     params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, auc, epoch, auc_min, epoch_min]
-    pd.DataFrame([params], columns = cols).to_csv('./outputs/'+model_name)
+    for i in range(0, 10):
+        string = './outputs/class_' + str(i)
+        if not os.path.exists(string):
+            os.makedirs(string)
+    pd.DataFrame([params], columns = cols).to_csv('./outputs/class_'+str(normal_class)+'/'+model_name)
