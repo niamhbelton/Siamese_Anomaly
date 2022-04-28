@@ -204,18 +204,18 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           early_stop_iter = 0
           best_model=True
           model_name_temp = model_name + '_mean_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
-          for f in os.listdir('./outputs/models/'):
+          for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
             if (model_name in f) & ('mean' in f) :
-                os.remove(f'./outputs/models/{f}')
+                os.remove(f'./outputs/models/class_'+str(normal_class) + '/{f}')
           torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
-          for f in os.listdir('./outputs/ED/'):
+          for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
             if (model_name in f) & ('mean' in f) :
-                os.remove(f'./outputs/ED/{f}')
+                os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{f}')
           df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
-          for f in os.listdir('./outputs/ref_vec/'):
+          for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
              if (model_name in f) & ('minimum' in f) :
-              os.remove(f'./outputs/ref_vec/{f}')
+              os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{f}')
           ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
 
@@ -227,18 +227,18 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           early_stop_iter = 0
           best_model=True
           model_name_temp = model_name + '_minimum_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc_min, 3))
-          for f in os.listdir('./outputs/models/'):
+          for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
             if (model_name in f) & ('minimum' in f):
-                os.remove(f'./outputs/models/{f}')
+                os.remove(f'./outputs/models/class_'+str(normal_class) + '/{f}')
           torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
-          for f in os.listdir('./outputs/ED/'):
+          for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
             if (model_name in f) & ('minimum' in f) :
-                os.remove(f'./outputs/ED/{f}')
+                os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{f}')
           df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
-          for f in os.listdir('./outputs/ref_vec/'):
+          for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
              if (model_name in f) & ('minimum' in f) :
-              os.remove(f'./outputs/ref_vec/{f}')
+              os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{f}')
           ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
 
