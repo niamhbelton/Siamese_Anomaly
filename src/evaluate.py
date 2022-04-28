@@ -58,7 +58,6 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         if i % 1000 == 0:
           print(i)
 
-
         image = data[0][0]
         label = data[2].item()
 
@@ -117,13 +116,11 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means'])))
         auc = metrics.auc(fpr, tpr)
 
-    avg_loss = (loss_sum / len(indexes) )/ val_dataset.__len__()
-
-    feat_vecs = pd.DataFrame([ref_images['images1'])
+    feat_vecs = pd.DataFrame(ref_images['images1'].detach().cpu().numpy())
     for j in range(1, len(indexes)):
-        feat_vecs = pd.concat([feat_vecs, ref_images['images{}'.format(j)]], axis =0)
+        feat_vecs = pd.concat([feat_vecs, pd.DataFrame(ref_images['images{}'.format(j)].detach().cpu().numpy())], axis =0)
 
-
+    avg_loss = (loss_sum / len(indexes) )/ val_dataset.__len__()
     return auc, avg_loss, auc_min, df, feat_vecs
 
 def softmax(x, axis=None):
