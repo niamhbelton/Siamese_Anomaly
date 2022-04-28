@@ -56,6 +56,8 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
         os.makedirs('outputs/models')
     if not os.path.exists('outputs/ED'):
         os.makedirs('outputs/ED')
+    if not os.path.exists('outputs/ref_vec'):
+        os.makedirs('outputs/ref_vec')
     if not os.path.exists('graph_data'):
         os.makedirs('graph_data')
 
@@ -171,7 +173,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
 
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'test'
-        val_auc, val_loss, val_auc_min, df = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
+        val_auc, val_loss, val_auc_min, df, feat_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
         aucs.append(val_auc)
         val_losses.append(val_loss)
@@ -199,6 +201,11 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
                 os.remove(f'./outputs/ED/{f}')
           df.to_csv('./outputs/ED/' +model_name_temp)
 
+          for f in os.listdir('./outputs/ref_vec/'):
+             if (model_name in f) & ('minimum' in f) :
+              os.remove(f'./outputs/ref_vec/{f}')
+          df.to_csv('./outputs/ref_vec/' +model_name_temp)
+
 
 
         if val_auc_min > best_val_auc_min :
@@ -216,6 +223,12 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
             if (model_name in f) & ('minimum' in f) :
                 os.remove(f'./outputs/ED/{f}')
           df.to_csv('./outputs/ED/' +model_name_temp)
+
+          for f in os.listdir('./outputs/ref_vec/'):
+             if (model_name in f) & ('minimum' in f) :
+              os.remove(f'./outputs/ref_vec/{f}')
+          df.to_csv('./outputs/ref_vec/' +model_name_temp)
+
 
         if best_model==False:
           early_stop_iter += 1
