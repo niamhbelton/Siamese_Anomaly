@@ -54,10 +54,22 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
         os.makedirs('outputs')
     if not os.path.exists('outputs/models'):
         os.makedirs('outputs/models')
+    for i in range(0, 10):
+        string = './outputs/models/class_' + str(i)
+        if not os.path.exists(string):
+            os.makedirs(string)
     if not os.path.exists('outputs/ED'):
         os.makedirs('outputs/ED')
+    for i in range(0, 10):
+        string = './outputs/ED/class_' + str(i)
+        if not os.path.exists(string):
+            os.makedirs(string)
     if not os.path.exists('outputs/ref_vec'):
         os.makedirs('outputs/ref_vec')
+    for i in range(0, 10):
+        string = './outputs/ref_vec/class_' + str(i)
+        if not os.path.exists(string):
+            os.makedirs(string)
     if not os.path.exists('graph_data'):
         os.makedirs('graph_data')
 
@@ -195,16 +207,16 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           for f in os.listdir('./outputs/models/'):
             if (model_name in f) & ('mean' in f) :
                 os.remove(f'./outputs/models/{f}')
-          torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
+          torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
           for f in os.listdir('./outputs/ED/'):
             if (model_name in f) & ('mean' in f) :
                 os.remove(f'./outputs/ED/{f}')
-          df.to_csv('./outputs/ED/' +model_name_temp)
+          df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
           for f in os.listdir('./outputs/ref_vec/'):
              if (model_name in f) & ('minimum' in f) :
               os.remove(f'./outputs/ref_vec/{f}')
-          ref_vecs.to_csv('./outputs/ref_vec/' +model_name_temp)
+          ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
 
 
@@ -218,16 +230,16 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           for f in os.listdir('./outputs/models/'):
             if (model_name in f) & ('minimum' in f):
                 os.remove(f'./outputs/models/{f}')
-          torch.save(model.state_dict(), './outputs/models/' + model_name_temp)
+          torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
           for f in os.listdir('./outputs/ED/'):
             if (model_name in f) & ('minimum' in f) :
                 os.remove(f'./outputs/ED/{f}')
-          df.to_csv('./outputs/ED/' +model_name_temp)
+          df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
           for f in os.listdir('./outputs/ref_vec/'):
              if (model_name in f) & ('minimum' in f) :
               os.remove(f'./outputs/ref_vec/{f}')
-          ref_vecs.to_csv('./outputs/ref_vec/' +model_name_temp)
+          ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
 
         if best_model==False:
