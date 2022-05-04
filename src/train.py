@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from evaluate import evaluate
 import random
-
+import time
 
 class ContrastiveLoss(torch.nn.Module):
     def __init__(self, margin=0.1):
@@ -40,8 +40,8 @@ class ContrastiveLoss(torch.nn.Module):
           euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() )
 
 
-
-        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), self.margin - euclidean_distance])), 2) * 0.5)
+        marg = (len(vectors) + alpha) * self.margin
+        loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), marg - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
 def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
@@ -103,6 +103,9 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
 
+    patience = 0
+    max_patience = 2
+    start_time = time.time()
 
     for epoch in range(epochs):
 
@@ -176,83 +179,60 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
               dictionary[index].append(max_ind)
               loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight)
 
-
             loss_sum+= loss.item()
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward(retain_graph=True)
             optimizer.step()
 
+
         output_name = model_name + '_output_epoch_' + str(epoch+1)
         task = 'test'
-        val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
-        aucs.append(val_auc)
-        val_losses.append(val_loss)
+
         train_losses.append((loss_sum / len(indexes)))
 
         print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
-        print("Validation loss: {}".format(val_losses[-1]))
-        print('AUC is {}'.format(aucs[-1]))
+
+        if epoch > 1:
+          decrease = (((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100) - (((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100)
+          print((((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100))
+          print((((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100))
+          print(decrease)
+
+          if decrease <= 1.0:
+            patience += 1
 
 
-        scheduler.step(val_loss)
-        best_model=False
-        if val_auc > best_val_auc:
-          best_val_auc = val_auc
-          best_epoch = epoch+1
-          early_stop_iter = 0
-          best_model=True
-          model_name_temp = model_name + '_mean_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3))
-          for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
-            if (model_name in f) & ('mean' in f) :
-                os.remove(f'./outputs/models/class_'+str(normal_class) + '/{}'.format(f))
-          torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
-          for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
-            if (model_name in f) & ('mean' in f) :
-                os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{}'.format(f))
-          df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
+          if (patience==max_patience):
+            print("--- %s seconds ---" % (time.time() - start_time))
+            training_time = time.time() - start_time
+            val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
-          for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
-             if (model_name in f) & ('minimum' in f) :
-              os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{}'.format(f))
-          ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
+            model_name_temp = model_name + '_mean_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3)) + '_min_auc_' + str(np.round(val_auc_min, 3))
+            for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
+              if (model_name in f) & ('mean' in f) :
+                  os.remove(f'./outputs/models/class_'+str(normal_class) + '/{}'.format(f))
+            torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
+            for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
+              if (model_name in f) & ('mean' in f) :
+                  os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{}'.format(f))
+            df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
+            for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
+              if (model_name in f) & ('minimum' in f) :
+                os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{}'.format(f))
+            ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
-
-        if val_auc_min > best_val_auc_min :
-          best_val_auc_min = val_auc_min
-          best_epoch_min = epoch+1
-
-          early_stop_iter = 0
-          best_model=True
-          model_name_temp = model_name + '_minimum_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc_min, 3))
-          for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
-            if (model_name in f) & ('minimum' in f):
-                os.remove(f'./outputs/models/class_'+str(normal_class) + '/{}'.format(f))
-          torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
-          for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
-            if (model_name in f) & ('minimum' in f) :
-                os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{}'.format(f))
-          df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
-
-          for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
-             if (model_name in f) & ('minimum' in f) :
-              os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{}'.format(f))
-          ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
-
-
-        if best_model==False:
-          early_stop_iter += 1
-          if early_stop_iter == max_iter:
             break
 
 
+
     print("Finished Training")
-    print("Best validation AUC was {} on epoch {}".format(best_val_auc, best_epoch))
+    print("AUC was {} on epoch {}".format(val_auc, epoch))
 
 
-    return best_val_auc, best_epoch, best_val_auc_min, best_epoch_min
+    return val_auc, epoch, val_auc_min, training_time
 
 
 
@@ -283,7 +263,8 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
 
       con = np.where(np.array(train_dataset.targets)!=normal_class)[0]
       samp = random.sample(range(0, len(con)), int(numb))
-      final_indexes = np.array(list(final_indexes) + list(con[samp]))
+      samp2 = random.sample(range(0, len(final_indexes)), len(final_indexes) - int(numb))
+      final_indexes = np.array(list(final_indexes[samp2]) + list(con[samp]))
     return final_indexes
 
 
@@ -375,10 +356,10 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss()
-    auc, epoch, auc_min, epoch_min = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
+    auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
 
-    cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'AUC', 'epoch', 'AUC_min', 'epoch_min']
-    params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, auc, epoch, auc_min, epoch_min]
+    cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'AUC', 'epoch', 'auc_min','training_time']
+    params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, auc, epoch, auc_min, training_time]
     for i in range(0, 10):
         string = './outputs/class_' + str(i)
         if not os.path.exists(string):
