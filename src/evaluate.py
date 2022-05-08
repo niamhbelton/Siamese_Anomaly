@@ -158,7 +158,7 @@ def parse_arguments():
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
-    parser.add_argument('--model_type', choices = ['MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['MNIST_VGG3', 'CIFAR_VGG3'], required=True)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('-o', '--output_name', type=str, required=True)
     parser.add_argument('--data_path',  required=True)
