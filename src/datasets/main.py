@@ -18,7 +18,6 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
                                 root=data_path,
                                 normal_class=normal_class,
                                 task = task,
-                                data_path = data_path,
                                 download_data = download_data)
 
 
@@ -30,7 +29,6 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
                                 root=data_path,
                                 normal_class=normal_class,
                                 task = task,
-                                data_path = data_path,
                                 download_data = download_data)
 
     if dataset_name == 'fashion':

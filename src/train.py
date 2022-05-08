@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import LeNet_Avg, LeNet_Max, LeNet_Tan, LeNet_Leaky, LeNet_Norm, LeNet_Drop, CIFAR_VGG3, MNIST_VGG3
+from model import CIFAR_VGG3, MNIST_VGG3
 import os
 import numpy as np
 import pandas as pd
@@ -17,107 +17,46 @@ class ContrastiveLoss(torch.nn.Module):
         self.margin = margin
         self.v = v
 
-    def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
+    def forward(self, output1, vectors, feat1, label, alpha):
         euclidean_distance = torch.FloatTensor([0]).cuda()
-        min_value=0
-        if weight == True:
-          eds=[]
-          for i in vectors:
-            eds.append(F.pairwise_distance(i, feat1))
 
+        #get the euclidean distance between output1 and all other vectors
+        for i in vectors:
+          euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()
 
-      #    print(eds)
-          for i,dist in enumerate(eds):
-            euclidean_distance += ((1-(dist/sum(eds))) * (F.pairwise_distance(output1, vectors[i])) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda())
-      #      print('weight {} is {}'.format(i, (1-(dist/sum(eds)))))
+        euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() )
 
-          euclidean_distance += (alpha*(F.pairwise_distance(output1, feat1) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()))
-
-        else:
-          for i in vectors:
-            euclidean_distance += (F.pairwise_distance(output1, i)) / torch.sqrt(torch.Tensor([output1.size()[1]])).cuda()  #+ ((alpha*F.pairwise_distance(output1, feat1)))))
-
-           # print('ed is {}'.format(euclidean_distance))
-          euclidean_distance += alpha*((F.pairwise_distance(output1, feat1)) /torch.sqrt(torch.Tensor([output1.size()[1]])).cuda() )
-
-
+        #calculate the margin
         marg = (len(vectors) + alpha) * self.margin
+        #if v > 0.0, implement soft-boundary
         if self.v > 0.0:
             euclidean_distance = (1/self.v) * euclidean_distance
+        #calculate the loss
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), marg - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, weight):
+def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, patience=2, factor=.1, threshold=1e-4, verbose=True)
-    if not os.path.exists('outputs'):
-        os.makedirs('outputs')
-    if not os.path.exists('outputs/models'):
-        os.makedirs('outputs/models')
-    for i in range(0, 10):
-        string = './outputs/models/class_' + str(i)
-        if not os.path.exists(string):
-            os.makedirs(string)
-    if not os.path.exists('outputs/ED'):
-        os.makedirs('outputs/ED')
-    for i in range(0, 10):
-        string = './outputs/ED/class_' + str(i)
-        if not os.path.exists(string):
-            os.makedirs(string)
-    if not os.path.exists('outputs/ref_vec'):
-        os.makedirs('outputs/ref_vec')
-    for i in range(0, 10):
-        string = './outputs/ref_vec/class_' + str(i)
-        if not os.path.exists(string):
-            os.makedirs(string)
-    if not os.path.exists('graph_data'):
-        os.makedirs('graph_data')
-
-    best_val_auc = 0
-    best_epoch = -1
-    best_val_auc_min = 0
-    best_epoch_min = -1
-    early_stop_iter = 0
-    max_iter = 3
-    stop_training =False
-    ind = list(range(0, len(indexes)))
-
     train_losses = []
-    val_losses = []
-    aucs = []
 
-    weight_totals = []
-    weight_means = []
-
-
-    np.random.seed(epochs)
-    rand_freeze = np.random.randint(len(indexes) )
-    base_ind = ind[rand_freeze]
-
-    dictionary={}
-    for i in range(0, len(ind)):
-      dictionary[i] = []
-
-
+    #select datapoint from the reference set to use as anchor
     if freeze == True:
+      np.random.seed(epochs)
+      rand_freeze = np.random.randint(len(indexes) )
+      base_ind = ind[rand_freeze]
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
 
     patience = 0
     max_patience = 2
     start_time = time.time()
-
+    ind = list(range(0, len(indexes)))
     for epoch in range(epochs):
-
-
         model.train()
         loss_sum = 0
         print("Starting epoch " + str(epoch+1))
-
-
         np.random.seed(epoch)
         np.random.shuffle(ind)
         for i, index in enumerate(ind):
@@ -142,25 +81,19 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
               else:
                 output2 = model.forward(img2.float())
 
-           #   print('outupt 1 {}'.format(output1))
-            #  print('outupt 2 {}'.format(output2))
-
-              loss = criterion(output1,output2,feat1,labels,alpha,weight=weight)
+              loss = criterion(output1,output2,feat1,labels,alpha)
 
             else:
               max_eds = [0] * k
               max_inds = [-1] * k
-              max_euclidean_distance =0
               max_ind =-1
               vectors=[]
-              c=0
               for j in range(0, len(ind)):
                 if (ind[j] != base_ind) & (index != ind[j]):
                   output2=model(train_dataset.__getitem__(ind[j], seed, base_ind)[0].to(device).float())
                   vectors.append(output2)
                   euclidean_distance = F.pairwise_distance(output1, output2)
-                  if smart_samp == 1:
-                    for b, vec in enumerate(max_eds):
+                  for b, vec in enumerate(max_eds):
                       if euclidean_distance > vec:
                         max_eds.insert(b, euclidean_distance)
                         max_inds.insert(b, len(vectors)-1)
@@ -169,18 +102,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
                           max_inds.pop()
                         break
 
-
-                  else:
-                    if (euclidean_distance > max_euclidean_distance) & (j not in dictionary[index]):
-                      max_euclidean_distance = euclidean_distance
-                      max_ind = j
-
-          #    print(len(vectors))
-           #   print(len(max_inds))
-            #  print(len(max_eds))
-             # print(max_inds)
-              dictionary[index].append(max_ind)
-              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha,weight=weight)
+              loss = criterion(output1,[vectors[x] for x in max_inds],feat1,labels,alpha)
 
             loss_sum+= loss.item()
             # Backward and optimize
@@ -188,20 +110,15 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
             loss.backward(retain_graph=True)
             optimizer.step()
 
-
-        output_name = model_name + '_output_epoch_' + str(epoch+1)
-        task = 'test'
-
-
         train_losses.append((loss_sum / len(indexes)))
 
         print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
 
         if epoch > 1:
           decrease = (((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100) - (((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100)
-          print((((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100))
-          print((((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100))
-          print(decrease)
+        #  print((((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100))
+         # print((((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100))
+          #print(decrease)
 
           if decrease <= 1.0:
             patience += 1
@@ -210,20 +127,22 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           if (patience==max_patience):
             print("--- %s seconds ---" % (time.time() - start_time))
             training_time = time.time() - start_time
+            task = 'test'
+            output_name = model_name + '_output_epoch_' + str(epoch+1)
             val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
-            model_name_temp = model_name + '_mean_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3)) + '_min_auc_' + str(np.round(val_auc_min, 3))
+            model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3)) + '_min_auc_' + str(np.round(val_auc_min, 3))
             for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
-              if (model_name in f) & ('mean' in f) :
+              if (model_name in f) :
                   os.remove(f'./outputs/models/class_'+str(normal_class) + '/{}'.format(f))
             torch.save(model.state_dict(), './outputs/models/class_'+str(normal_class)+'/' + model_name_temp)
             for f in os.listdir('./outputs/ED/class_'+str(normal_class) + '/'):
-              if (model_name in f) & ('mean' in f) :
+              if (model_name in f) :
                   os.remove(f'./outputs/ED/class_'+str(normal_class) + '/{}'.format(f))
             df.to_csv('./outputs/ED/class_'+str(normal_class)+'/' +model_name_temp)
 
             for f in os.listdir('./outputs/ref_vec/class_'+str(normal_class) + '/'):
-              if (model_name in f) & ('minimum' in f) :
+              if (model_name in f) :
                 os.remove(f'./outputs/ref_vec/class_'+str(normal_class) + '/{}'.format(f))
             ref_vecs.to_csv('./outputs/ref_vec/class_'+str(normal_class) + '/' +model_name_temp)
 
@@ -240,7 +159,6 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
 
 
 def init_feat_vec(model,base_ind, train_dataset ):
-        """Initialize hypersphere center c as the mean from an initial forward pass on the data."""
 
         model.eval()
         feat1,_,_,_ = train_dataset.__getitem__(base_ind)
@@ -253,19 +171,18 @@ def init_feat_vec(model,base_ind, train_dataset ):
 
 def create_reference(contamination, dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
-    ind = np.where(np.array(train_dataset.targets)==normal_class)[0]
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data) #get all training data
+    ind = np.where(np.array(train_dataset.targets)==normal_class)[0] #get indexes in the training set that are equal to the normal class
     random.seed(seed)
-    samp = random.sample(range(0, len(ind)), N)
+    samp = random.sample(range(0, len(ind)), N) #randomly sample N normal data points
     final_indexes = ind[samp]
     if contamination != 0:
       numb = np.ceil(N*contamination)
-      print(numb)
       if numb == 0.0:
         numb=1.0
 
-      con = np.where(np.array(train_dataset.targets)!=normal_class)[0]
-      samp = random.sample(range(0, len(con)), int(numb))
+      con = np.where(np.array(train_dataset.targets)!=normal_class)[0] #get indexes of non-normal class
+      samp = random.sample(range(0, len(con)), int(numb)) 
       samp2 = random.sample(range(0, len(final_indexes)), len(final_indexes) - int(numb))
       final_indexes = np.array(list(final_indexes[samp2]) + list(con[samp]))
     return final_indexes
@@ -275,7 +192,7 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
-    parser.add_argument('--model_type', choices = ['LeNet_Avg', 'LeNet_Max', 'LeNet_Tan', 'LeNet_Leaky', 'LeNet_Norm', 'LeNet_Drop', 'CIFAR_VGG3','MNIST_VGG3','MNIST_LeNet', 'LeNet5'], required=True)
+    parser.add_argument('--model_type', choices = ['CIFAR_VGG3','MNIST_VGG3'], required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
@@ -286,8 +203,7 @@ def parse_arguments():
     parser.add_argument('--weight_init_seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
     parser.add_argument('--freeze', default = True)
-    parser.add_argument('--smart_samp', type = int, choices = [0,1,2], default = 0)
-    parser.add_argument('--weight', type = bool, default = False)
+    parser.add_argument('--smart_samp', type = int, choices = [0,1], default = 0)
     parser.add_argument('--k', type = int, default = 0)
     parser.add_argument('--epochs', type=int, required=True)
     parser.add_argument('--data_path',  required=True)
@@ -319,54 +235,64 @@ if __name__ == '__main__':
     weight_decay = args.weight_decay
     smart_samp = args.smart_samp
     k = args.k
-    weight = args.weight
     weight_init_seed = args.weight_init_seed
     v = args.v
     task = 'train'
 
+    #if indexes for reference set aren't provided, create the reference set.
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
         indexes = create_reference(contamination, dataset_name, normal_class, task,  data_path, download_data, N, seed)
 
-
+    #create train and test set
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
     val_dataset = load_dataset(dataset_name, indexes, normal_class, 'test', data_path, download_data=False)
 
-
+    #set the seed
     torch.manual_seed(weight_init_seed)
     torch.cuda.manual_seed(weight_init_seed)
     torch.cuda.manual_seed_all(weight_init_seed)
-    if model_type == 'LeNet_Avg':
-        model = LeNet_Avg()
-    elif model_type == 'LeNet_Max':
-        model = LeNet_Max()
-    elif model_type == 'LeNet_Tan':
-        model = LeNet_Tan()
-    elif model_type == 'LeNet_Leaky':
-        model = LeNet_Leaky()
-    elif model_type == 'LeNet_Norm':
-        model = LeNet_Norm()
-    elif model_type == 'LeNet_Drop':
-        model = LeNet_Drop()
-#    if model_type == 'Net':
-#        model = Net()
-    elif model_type == 'CIFAR_VGG3':
+
+    #create directories
+    if not os.path.exists('outputs'):
+        os.makedirs('outputs')
+    if not os.path.exists('outputs/models'):
+        os.makedirs('outputs/models')
+
+    string = './outputs/models/class_' + str(normal_class)
+    if not os.path.exists(string):
+        os.makedirs(string)
+    if not os.path.exists('outputs/ED'):
+        os.makedirs('outputs/ED')
+
+    string = './outputs/ED/class_' + str(normal_class)
+    if not os.path.exists(string):
+        os.makedirs(string)
+
+    if not os.path.exists('outputs/ref_vec'):
+        os.makedirs('outputs/ref_vec')
+
+    string = './outputs/ref_vec/class_' + str(normal_class)
+    if not os.path.exists(string):
+        os.makedirs(string)
+
+
+    #Initialise the model
+    if model_type == 'CIFAR_VGG3':
         model = CIFAR_VGG3(vector_size)
     elif model_type == 'MNIST_VGG3':
         model = MNIST_VGG3(vector_size)
 
 
-
-
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss(v)
-    auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
+    auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k)
 
+    #write out all details of model training
     cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'v', 'contam' , 'AUC', 'epoch', 'auc_min','training_time']
     params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, v, contamination, auc, epoch, auc_min, training_time]
-    for i in range(0, 10):
-        string = './outputs/class_' + str(i)
-        if not os.path.exists(string):
-            os.makedirs(string)
+    string = './outputs/class_' + str(normal_class)
+    if not os.path.exists(string):
+        os.makedirs(string)
     pd.DataFrame([params], columns = cols).to_csv('./outputs/class_'+str(normal_class)+'/'+model_name)

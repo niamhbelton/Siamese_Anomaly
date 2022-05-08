@@ -40,7 +40,7 @@ class CIFAR10(data.Dataset):
         super().__init__()
 
         self.task = task  # training set or test set
-        self.data_path = data_path
+        self.data_path = root
         self.indexes = indexes
         self.normal_class = normal_class
         self.download_data = download_data
@@ -69,7 +69,6 @@ class CIFAR10(data.Dataset):
                 else:
                     self.targets.extend(entry['fine_labels'])
 
-        print(len(self.data))
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
 
 
@@ -92,7 +91,6 @@ class CIFAR10(data.Dataset):
                 new_targets.append(self.targets[i])
               self.targets = new_targets
 
-              print(self.data[:,0,:,:].reshape(1000,1024).shape)
               pd.DataFrame(self.data[:,0,:,:].reshape(1000,1024)).to_csv('val_data.csv')
               pd.DataFrame(self.targets).to_csv('val_targets.csv')
 
@@ -135,7 +133,6 @@ class CIFAR10(data.Dataset):
               base = True
 
             img2, target2 = self.data[ind], int(self.targets[ind])
-            #img2 = img2 / 255
             label = torch.Tensor([0])
 
 
