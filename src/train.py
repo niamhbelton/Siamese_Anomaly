@@ -12,9 +12,10 @@ import random
 import time
 
 class ContrastiveLoss(torch.nn.Module):
-    def __init__(self, margin=0.1):
+    def __init__(self, v=0.0,margin=0.1):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
+        self.v = v
 
     def forward(self, output1, vectors, feat1, label, alpha, weight=False, task=False):
         euclidean_distance = torch.FloatTensor([0]).cuda()
@@ -41,6 +42,8 @@ class ContrastiveLoss(torch.nn.Module):
 
 
         marg = (len(vectors) + alpha) * self.margin
+        if self.v > 0.0:
+            euclidean_distance = (1/self.v) * euclidean_distance
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), marg - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
@@ -256,7 +259,7 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
     samp = random.sample(range(0, len(ind)), N)
     final_indexes = ind[samp]
     if contamination != 0:
-      numb = np.floor(N*contamination)
+      numb = np.ceil(N*contamination)
       print(numb)
       if numb == 0.0:
         numb=1.0
@@ -290,6 +293,7 @@ def parse_arguments():
     parser.add_argument('--data_path',  required=True)
     parser.add_argument('--download_data',  default=True)
     parser.add_argument('--contamination',  type=float, default=0)
+    parser.add_argument('--v',  type=float, default=0.0)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -317,6 +321,7 @@ if __name__ == '__main__':
     k = args.k
     weight = args.weight
     weight_init_seed = args.weight_init_seed
+    v = args.v
     task = 'train'
 
     if indexes != []:
@@ -355,11 +360,11 @@ if __name__ == '__main__':
 
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
-    criterion = ContrastiveLoss()
+    criterion = ContrastiveLoss(v)
     auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, weight)
 
-    cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'AUC', 'epoch', 'auc_min','training_time']
-    params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, auc, epoch, auc_min, training_time]
+    cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'v', 'contam' , 'AUC', 'epoch', 'auc_min','training_time']
+    params = [normal_class, seed, weight_init_seed, alpha, lr, weight_decay, vector_size, smart_samp, k, v, contamination, auc, epoch, auc_min, training_time]
     for i in range(0, 10):
         string = './outputs/class_' + str(i)
         if not os.path.exists(string):
