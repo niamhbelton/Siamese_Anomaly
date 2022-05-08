@@ -166,7 +166,8 @@ def parse_arguments():
     parser.add_argument('-N', '--num_ref', type=int, default = 20)
     parser.add_argument('--seed', type=int, default = 100)
     parser.add_argument('--alpha', type=float, default = 0)
-
+    parser.add_argument('--contamination',  type=float, default=0)
+    parser.add_argument('--v',  type=float, default=0.0)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -189,13 +190,15 @@ if __name__ == '__main__':
     indexes = args.index
     alpha = args.alpha
     epochs = args.epochs
+    contamination = args.contamination
+    v=args.v
 
 
     if indexes != []:
        indexes = [int(item) for item in args.index.split(', ')]
     else:
         download_data = False
-        indexes = create_reference(dataset, normal_class, 'train', data_path, download_data, N, seed)
+        indexes = create_reference(contamination, dataset, normal_class, 'train', data_path, download_data, N, seed)
 
     if model_type == 'CIFAR_VGG3':
         model = CIFAR_VGG3(vector_size)
