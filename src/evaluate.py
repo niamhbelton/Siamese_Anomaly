@@ -41,15 +41,11 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     model.eval()
 
 
-    #create loader for dataset that is being testing
+    #create loader for dataset for test set
     loader = torch.utils.data.DataLoader(val_dataset, batch_size=1, shuffle=True, num_workers=1, drop_last=False)
     outs={} #a dictionary where the key is the reference image and the values is a list of the distances between the reference image and all images in the test set
     ref_images={} #dictionary for feature vectors of reference set
     ind = list(range(0, len(indexes)))
-    #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
-
-
-    cols=[]
 
     #loop through the reference images and 1) get the reference image from the dataloader, 2) get the feature vector for the reference image and 3) initialise the values of the 'out' dictionary as a list.
     for i in ind:
@@ -60,8 +56,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         ref_images['images{}'.format(i)] = model.forward( img1.cuda().float())
 
       outs['outputs{}'.format(i)] =[]
-      string = 'col_' + str(i)
-      cols.append(string)
+
 
 
     means = []
@@ -81,10 +76,9 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         labels.append(label)
         total =0
         mini=torch.Tensor([1e50])
-
         out = model.forward(image.cuda().float()) #get feature vector for test image
 
-
+        #calculate the distance from the test image to each of the datapoints in the reference set
         for j in range(0, len(indexes)):
             euclidean_distance = (F.pairwise_distance(out, ref_images['images{}'.format(j)]) / torch.sqrt(torch.Tensor([out.size()[1]])).cuda() ) + (alpha*(F.pairwise_distance(out, feat1) /torch.sqrt(torch.Tensor([out.size()[1]])).cuda() ))
             outs['outputs{}'.format(j)].append(euclidean_distance.item())
@@ -104,11 +98,8 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         del total
         torch.cuda.empty_cache()
 
-
     cols = ['label','minimum_dists', 'means']
     df = pd.concat([pd.DataFrame(labels, columns = ['label']), pd.DataFrame(minimum_dists, columns = ['minimum_dists']),  pd.DataFrame(means, columns = ['means'])], axis =1)
-
-
     print('The mean D(x) of anomalies is {}'.format(np.mean(df['means'].loc[df['label'] == 1])))
     print('The mean D(x) of normal datapoints is {}'.format(np.mean(df['means'].loc[df['label'] == 0])))
     for i in range(0, len(indexes)):
@@ -123,7 +114,7 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
         fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['minimum_dists']))
         auc_min = metrics.auc(fpr, tpr)
         print('AUC based on minimum vector {}'.format(auc_min))
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),softmax(np.array(df['means'])))
+        fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['means']))
         auc = metrics.auc(fpr, tpr)
 
     feat_vecs = pd.DataFrame(ref_images['images1'].detach().cpu().numpy())
@@ -132,6 +123,17 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
 
     avg_loss = (loss_sum / len(indexes) )/ val_dataset.__len__()
     return auc, avg_loss, auc_min, df, feat_vecs
+
+
+
+def init_feat_vec(model,base_ind, train_dataset ):
+
+        model.eval()
+        feat1,_,_,_ = train_dataset.__getitem__(base_ind)
+        with torch.no_grad():
+          feat1 = model(feat1.cuda().float()).cuda()
+
+        return feat1
 
 
 def create_reference(contamination, dataset_name, normal_class, task, data_path, download_data, N, seed):
@@ -157,6 +159,7 @@ def parse_arguments():
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('--model_path', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
+    parser.add_argument('--vector_size', type=int, default=1024)
     parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--model_type', choices = ['MNIST_VGG3', 'CIFAR_VGG3'], required=True)
@@ -192,12 +195,13 @@ if __name__ == '__main__':
     epochs = args.epochs
     contamination = args.contamination
     v=args.v
+    vector_size = args.vector_size
 
 
     if indexes != []:
        indexes = [int(item) for item in args.index.split(', ')]
     else:
-        download_data = False
+        download_data = True
         indexes = create_reference(contamination, dataset, normal_class, 'train', data_path, download_data, N, seed)
 
     if model_type == 'CIFAR_VGG3':
@@ -211,7 +215,7 @@ if __name__ == '__main__':
 
     criterion = ContrastiveLoss()
     ref_dataset = load_dataset(dataset, indexes, normal_class, 'train', data_path, download_data=True)
-    val_dataset = load_dataset(dataset, indexes, normal_class, task, data_path, download_data=False)
+    val_dataset = load_dataset(dataset, indexes, normal_class, task, data_path, download_data=True)
 
     #freeze vector
     ind=list(range(0,len(indexes)))
@@ -220,6 +224,6 @@ if __name__ == '__main__':
     base_ind = ind[rand_freeze]
     feat1 = init_feat_vec(model,base_ind, ref_dataset )
 
-    auc, avg_loss, auc_min, df, feat_vecs = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, indexes, data_path , criterion, alpha)
+    auc, avg_loss, auc_min, df, feat_vecs = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, model_name, indexes, data_path , criterion, alpha)
 
     print('AUC is {}'.format(auc))
