@@ -36,7 +36,7 @@ class MNIST(data.Dataset):
     ) -> None:
         super().__init__()
         self.task = task  # training set or test set
-        self.data_path = data_path
+        self.data_path = root
         self.indexes = indexes
         self.normal_class = normal_class
         self.download_data = download_data
@@ -136,7 +136,6 @@ class MNIST(data.Dataset):
         base=False
         img, target = self.data[index], int(self.targets[index])
         img = torch.stack((img,img,img),0)
-    #    img = img / 255
 
         if self.task == 'train':
             np.random.seed(seed)
@@ -152,7 +151,6 @@ class MNIST(data.Dataset):
 
             img2, target2 = self.data[ind], int(self.targets[ind])
             img2 = torch.stack((img2,img2,img2),0)
-        #    img2 = img2 / 255
             label = torch.FloatTensor([0])
         else:
             img2 = torch.Tensor([1])
