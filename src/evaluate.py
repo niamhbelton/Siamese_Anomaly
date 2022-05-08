@@ -155,6 +155,7 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
 def parse_arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model_name', type=str, required=True)
+    parser.add_argument('--model_path', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
@@ -176,6 +177,7 @@ if __name__ == '__main__':
 
     args = parse_arguments()
     model_name = args.model_name
+    model_path = args.model_path
     dataset = args.dataset
     task = args.task
     normal_class = args.normal_class
@@ -201,7 +203,7 @@ if __name__ == '__main__':
         model = MNIST_VGG3(vector_size)
 
 
-    model.load_state_dict(torch.load('./outputs/models/' + model_name))
+    model.load_state_dict(torch.load(model_path + model_name))
     model.cuda()
 
     criterion = ContrastiveLoss()
