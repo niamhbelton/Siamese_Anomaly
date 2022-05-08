@@ -41,6 +41,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     train_losses = []
 
+    ind = list(range(0, len(indexes)))
     #select datapoint from the reference set to use as anchor
     if freeze == True:
       np.random.seed(epochs)
@@ -48,11 +49,10 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
       base_ind = ind[rand_freeze]
       feat1 = init_feat_vec(model,base_ind , train_dataset)
 
-
     patience = 0
     max_patience = 2
     start_time = time.time()
-    ind = list(range(0, len(indexes)))
+
     for epoch in range(epochs):
         model.train()
         loss_sum = 0
@@ -182,7 +182,7 @@ def create_reference(contamination, dataset_name, normal_class, task, data_path,
         numb=1.0
 
       con = np.where(np.array(train_dataset.targets)!=normal_class)[0] #get indexes of non-normal class
-      samp = random.sample(range(0, len(con)), int(numb)) 
+      samp = random.sample(range(0, len(con)), int(numb))
       samp2 = random.sample(range(0, len(final_indexes)), len(final_indexes) - int(numb))
       final_indexes = np.array(list(final_indexes[samp2]) + list(con[samp]))
     return final_indexes
