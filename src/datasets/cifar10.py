@@ -84,15 +84,13 @@ class CIFAR10(data.Dataset):
           elif self.task == 'validate':
               lst = list(range(0,len(self.data) ))
               ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-              randomlist = random.sample(range(0, len(ind)), 1000)
+              randomlist = random.sample(range(0, len(ind)), 1500)
               self.data = self.data[randomlist]
               new_targets=[]
               for i in randomlist:
                 new_targets.append(self.targets[i])
               self.targets = new_targets
 
-              pd.DataFrame(self.data[:,0,:,:].reshape(1000,1024)).to_csv('val_data.csv')
-              pd.DataFrame(self.targets).to_csv('val_targets.csv')
 
 
           self.targets = np.array(self.targets)

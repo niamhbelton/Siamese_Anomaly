@@ -127,7 +127,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           if (patience==max_patience):
             print("--- %s seconds ---" % (time.time() - start_time))
             training_time = time.time() - start_time
-            task = 'test'
+            task = 'validation'
             output_name = model_name + '_output_epoch_' + str(epoch+1)
             val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
     #create train and test set
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
-    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'test', data_path, download_data=False)
+    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validation', data_path, download_data=False)
 
     #set the seed
     torch.manual_seed(weight_init_seed)
