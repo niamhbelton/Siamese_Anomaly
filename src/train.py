@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
     #create train and test set
     train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
-    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validation', data_path, download_data=False)
+    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
 
     #set the seed
     torch.manual_seed(weight_init_seed)

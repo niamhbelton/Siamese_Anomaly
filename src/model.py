@@ -22,9 +22,6 @@ class CIFAR_VGG3(nn.Module):
       self.block7=models.vgg16(pretrained = True).features[14]
       self.block8=models.vgg16(pretrained = True).features[16]
       self.classifier = nn.Linear(4096, vector_size,bias=False)
-      self.act5 = nn.LeakyReLU()
-      self.drop = nn.Dropout(p=0.5)
-      self.classifier2 = nn.Linear(1024, 512,bias=False)
 
       # self.classifier = nn.Linear(1568, 512)
 
@@ -82,9 +79,6 @@ class MNIST_VGG3(nn.Module):
       self.block7=models.vgg16(pretrained = True).features[14]
       self.block8=models.vgg16(pretrained = True).features[16]
       self.classifier = nn.Linear(2304, vector_size,bias=False)
-      self.act5 = nn.LeakyReLU()
-      self.drop = nn.Dropout(p=0.5)
-      self.classifier2 = nn.Linear(1024, 512,bias=False)
 
       # self.classifier = nn.Linear(1568, 512)
 

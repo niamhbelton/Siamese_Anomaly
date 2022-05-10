@@ -3,7 +3,7 @@ from .cifar10 import CIFAR10
 from .mnist_fashion import FASHION
 
 
-def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_data,
+def load_dataset(dataset_name, fold, indexes, normal_class, task, data_path, download_data,
                  random_state=None):
     """Loads the dataset."""
 
@@ -27,6 +27,7 @@ def load_dataset(dataset_name, indexes, normal_class, task, data_path, download_
 
     if dataset_name == 'cifar10':
         dataset = CIFAR10(indexes = indexes,
+        fold=fold,
                                 root=data_path,
                                 normal_class=normal_class,
                                 task = task,

@@ -36,7 +36,7 @@ class MNIST(data.Dataset):
     ) -> None:
         super().__init__()
         self.task = task  # training set or test set
-        self.data_path = root
+        self.data_path = data_path
         self.indexes = indexes
         self.normal_class = normal_class
         self.download_data = download_data
@@ -53,31 +53,10 @@ class MNIST(data.Dataset):
         self.data, self.targets = self._load_data()
 
         if self.indexes != []: #if indexes is equal to [], original labels are not modified as this dataloader object is used by the 'create_reference' function. This function requires the original labels
-          if (self.task == 'train') :
-              self.data = np.array(self.data)[self.indexes]
-              new_targets=[]
-              for i in indexes:
-                new_targets.append(self.targets[i])
-              self.targets = new_targets
-
-
-          elif self.task == 'validate':
-              lst = list(range(0,len(self.data) ))
-              ind = [x for i,x in enumerate(lst) if i not in self.indexes]
-              randomlist = random.sample(range(0, len(ind)), 1500)
-              self.data = self.data[randomlist]
-              new_targets=[]
-              for i in randomlist:
-                new_targets.append(self.targets[i])
-              self.targets = new_targets
-
-
           self.targets[self.targets != normal_class] = -1
           self.targets[self.targets == normal_class] = -2
           self.targets[self.targets == -2] = 0
           self.targets[self.targets == -1] = 1
-
-
 
 
 
