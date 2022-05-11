@@ -127,9 +127,8 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           if (patience==max_patience):
             print("--- %s seconds ---" % (time.time() - start_time))
             training_time = time.time() - start_time
-            task = 'validation'
             output_name = model_name + '_output_epoch_' + str(epoch+1)
-            val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
+            val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
 
             model_name_temp = model_name + '_epoch_' + str(epoch+1) + '_val_auc_' + str(np.round(val_auc, 3)) + '_min_auc_' + str(np.round(val_auc_min, 3))
             for f in os.listdir('./outputs/models/class_'+str(normal_class) + '/'):
@@ -171,7 +170,7 @@ def init_feat_vec(model,base_ind, train_dataset ):
 
 def create_reference(contamination, dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data) #get all training data
+    train_dataset = load_dataset(dataset_name, indexes, normal_class,data_path, download_data) #get all training data
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0] #get indexes in the training set that are equal to the normal class
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N) #randomly sample N normal data points
@@ -210,6 +209,7 @@ def parse_arguments():
     parser.add_argument('--download_data',  default=True)
     parser.add_argument('--contamination',  type=float, default=0)
     parser.add_argument('--v',  type=float, default=0.0)
+    parser.add_argument('--task',  default='train', , choices = ['test', 'train'])
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -237,17 +237,20 @@ if __name__ == '__main__':
     k = args.k
     weight_init_seed = args.weight_init_seed
     v = args.v
-    task = 'train'
+    task = args.task
 
     #if indexes for reference set aren't provided, create the reference set.
     if indexes != []:
         indexes = [int(item) for item in indexes.split(', ')]
     else:
-        indexes = create_reference(contamination, dataset_name, normal_class, task,  data_path, download_data, N, seed)
+        indexes = create_reference(contamination, dataset_name, normal_class, 'train', data_path, download_data, N, seed)
 
     #create train and test set
-    train_dataset = load_dataset(dataset_name, indexes, normal_class, task,  data_path, download_data)
-    val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
+    train_dataset = load_dataset(dataset_name, indexes, normal_class, 'train',  data_path, download_data = download_data)
+    if task != 'train':
+        val_dataset = load_dataset(dataset_name, indexes, normal_class, 'test', data_path, download_data=False)
+    else:
+        val_dataset = load_dataset(dataset_name, indexes, normal_class, 'validate', data_path, download_data=False)
 
     #set the seed
     torch.manual_seed(weight_init_seed)

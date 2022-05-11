@@ -36,7 +36,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), marg - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha):
+def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha):
 
     model.eval()
 
@@ -110,12 +110,11 @@ def evaluate(feat1, base_ind, ref_dataset, val_dataset, model, task, dataset_nam
     df = df.sort_values(by='minimum_dists', ascending = False).reset_index(drop=True)
 
 
-    if task != 'train':
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['minimum_dists']))
-        auc_min = metrics.auc(fpr, tpr)
-        print('AUC based on minimum vector {}'.format(auc_min))
-        fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['means']))
-        auc = metrics.auc(fpr, tpr)
+    fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['minimum_dists']))
+    auc_min = metrics.auc(fpr, tpr)
+    print('AUC based on minimum vector {}'.format(auc_min))
+    fpr, tpr, thresholds = roc_curve(np.array(df['label']),np.array(df['means']))
+    auc = metrics.auc(fpr, tpr)
 
     feat_vecs = pd.DataFrame(ref_images['images1'].detach().cpu().numpy())
     for j in range(1, len(indexes)):
@@ -160,7 +159,7 @@ def parse_arguments():
     parser.add_argument('--model_path', type=str, required=True)
     parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--vector_size', type=int, default=1024)
-    parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['train', 'test', 'validate'])
+    parser.add_argument('--task', type=str, required=True, default = 'test', choices = ['test', 'validate'])
     parser.add_argument('--normal_class', type=int, default = 0)
     parser.add_argument('--model_type', choices = ['MNIST_VGG3', 'CIFAR_VGG3'], required=True)
     parser.add_argument('--epochs', type=int, required=True)
@@ -224,6 +223,6 @@ if __name__ == '__main__':
     base_ind = ind[rand_freeze]
     feat1 = init_feat_vec(model,base_ind, ref_dataset )
 
-    auc, avg_loss, auc_min, df, feat_vecs = evaluate(feat1, base_ind,ref_dataset, val_dataset, model, task, dataset, normal_class, output_name, model_name, indexes, data_path , criterion, alpha)
+    auc, avg_loss, auc_min, df, feat_vecs = evaluate(feat1, base_ind,ref_dataset, val_dataset, model,dataset, normal_class, output_name, model_name, indexes, data_path , criterion, alpha)
 
     print('AUC is {}'.format(auc))
