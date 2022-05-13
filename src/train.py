@@ -170,7 +170,7 @@ def init_feat_vec(model,base_ind, train_dataset ):
 
 def create_reference(contamination, dataset_name, normal_class, task, data_path, download_data, N, seed):
     indexes = []
-    train_dataset = load_dataset(dataset_name, indexes, normal_class,data_path, download_data) #get all training data
+    train_dataset = load_dataset(dataset_name, indexes, normal_class,task, data_path, download_data) #get all training data
     ind = np.where(np.array(train_dataset.targets)==normal_class)[0] #get indexes in the training set that are equal to the normal class
     random.seed(seed)
     samp = random.sample(range(0, len(ind)), N) #randomly sample N normal data points
@@ -209,7 +209,7 @@ def parse_arguments():
     parser.add_argument('--download_data',  default=True)
     parser.add_argument('--contamination',  type=float, default=0)
     parser.add_argument('--v',  type=float, default=0.0)
-    parser.add_argument('--task',  default='train', , choices = ['test', 'train'])
+    parser.add_argument('--task',  default='train', choices = ['test', 'train'])
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
