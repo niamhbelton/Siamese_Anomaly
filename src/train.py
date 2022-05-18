@@ -35,7 +35,7 @@ class ContrastiveLoss(torch.nn.Module):
         loss_contrastive = ((1-label) * torch.pow(euclidean_distance, 2) * 0.5) + ( (label) * torch.pow(torch.max(torch.Tensor([ torch.tensor(0), marg - euclidean_distance])), 2) * 0.5)
         return loss_contrastive
 
-def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k):
+def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp, k, eval_epoch):
     device='cuda'
     model.cuda()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -51,6 +51,10 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
 
     patience = 0
     max_patience = 2
+    best_val_auc = 0
+    max_iter = 0
+    patience2 = 3
+
     start_time = time.time()
 
     for epoch in range(epochs):
@@ -114,7 +118,22 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
 
         print("Epoch: {}, Train loss: {}".format(epoch+1, train_losses[-1]))
 
-        if epoch > 1:
+
+        if (eval_epoch == 1):
+            output_name = model_name + '_output_epoch_' + str(epoch+1)
+            val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
+            if val_auc > best_val_auc:
+                best_val_auc = val_auc
+                max_iter = 0
+
+            else:
+                max_iter+=1
+
+            if max_iter == patience2:
+                stop_training = True
+
+
+        elif epoch > 1:
           decrease = (((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100) - (((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100)
         #  print((((train_losses[-3] - train_losses[-2]) / train_losses[-3]) * 100))
          # print((((train_losses[-2] - train_losses[-1]) / train_losses[-2]) * 100))
@@ -124,7 +143,10 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
             patience += 1
 
 
-          if (patience==max_patience):
+          if (patience==max_patience) :
+              stop_training = True
+
+        if stop_training = True:
             print("--- %s seconds ---" % (time.time() - start_time))
             training_time = time.time() - start_time
             output_name = model_name + '_output_epoch_' + str(epoch+1)
@@ -210,6 +232,7 @@ def parse_arguments():
     parser.add_argument('--contamination',  type=float, default=0)
     parser.add_argument('--v',  type=float, default=0.0)
     parser.add_argument('--task',  default='train', choices = ['test', 'train'])
+    parser.add_argument('--eval_epoch',  default=0, choices = [0,1])
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -238,6 +261,7 @@ if __name__ == '__main__':
     weight_init_seed = args.weight_init_seed
     v = args.v
     task = args.task
+    eval_epoch = args.eval_epoch
 
     #if indexes for reference set aren't provided, create the reference set.
     if indexes != []:
@@ -290,7 +314,7 @@ if __name__ == '__main__':
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
     criterion = ContrastiveLoss(v)
-    auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k)
+    auc, epoch, auc_min, training_time = train(model,lr, weight_decay, train_dataset, val_dataset, epochs, criterion, alpha, model_name, indexes, data_path, normal_class, dataset_name, freeze, smart_samp,k, eval_epoch)
 
     #write out all details of model training
     cols = ['normal_class', 'ref_seed', 'weight_seed', 'alpha', 'lr', 'weight_decay', 'vector_size', 'smart_samp', 'k', 'v', 'contam' , 'AUC', 'epoch', 'auc_min','training_time']

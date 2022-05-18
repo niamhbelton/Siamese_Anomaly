@@ -84,7 +84,6 @@ class MNIST_VGG3(nn.Module):
 
     #   self.classifier = nn.Linear(1568, 64)
 
-    #  self.classifier = nn.Linear(1568, 2048)
 
 
   def forward(self, x):
