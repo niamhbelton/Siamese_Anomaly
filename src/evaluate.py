@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import torch
-from model import CIFAR_VGG3, MNIST_VGG3
+from model import CIFAR_VGG3, MNIST_VGG3, MNIST_VGG3_pre
 import os
 import numpy as np
 import pandas as pd

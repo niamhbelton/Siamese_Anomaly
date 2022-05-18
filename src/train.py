@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import CIFAR_VGG3, MNIST_VGG3
+from model import CIFAR_VGG3, MNIST_VGG3, MNIST_VGG3_pre
 import os
 import numpy as np
 import pandas as pd
@@ -54,6 +54,8 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
     best_val_auc = 0
     max_iter = 0
     patience2 = 3
+    stop_training = False
+
 
     start_time = time.time()
 
@@ -146,7 +148,7 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
           if (patience==max_patience) :
               stop_training = True
 
-        if stop_training = True:
+        if stop_training == True:
             print("--- %s seconds ---" % (time.time() - start_time))
             training_time = time.time() - start_time
             output_name = model_name + '_output_epoch_' + str(epoch+1)
@@ -232,7 +234,8 @@ def parse_arguments():
     parser.add_argument('--contamination',  type=float, default=0)
     parser.add_argument('--v',  type=float, default=0.0)
     parser.add_argument('--task',  default='train', choices = ['test', 'train'])
-    parser.add_argument('--eval_epoch',  default=0, choices = [0,1])
+    parser.add_argument('--eval_epoch', type=int, default=0)
+    parser.add_argument('--pretrain', type=int, default=1)
     parser.add_argument('-i', '--index', help='string with indices separated with comma and whitespace', type=str, default = [], required=False)
     args = parser.parse_args()
     return args
@@ -307,9 +310,15 @@ if __name__ == '__main__':
 
     #Initialise the model
     if model_type == 'CIFAR_VGG3':
-        model = CIFAR_VGG3(vector_size)
+        if args.pretrain == 1:
+            model = CIFAR_VGG3_pre(vector_size)
+        else:
+            model = CIFAR_VGG3(vector_size)
     elif model_type == 'MNIST_VGG3':
-        model = MNIST_VGG3(vector_size)
+        if args.pretrain == 1:
+            model = MNIST_VGG3_pre(vector_size)
+        else:
+            model = MNIST_VGG3(vector_size)
 
 
     model_name = model_name + '_normal_class_' + str(normal_class) + '_seed_' + str(seed)
