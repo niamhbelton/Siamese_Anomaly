@@ -124,8 +124,11 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
         if (eval_epoch == 1):
             output_name = model_name + '_output_epoch_' + str(epoch+1)
             val_auc, val_loss, val_auc_min, df, ref_vecs = evaluate(feat1, base_ind, train_dataset, val_dataset, model, dataset_name, normal_class, output_name, model_name, indexes, data_path, criterion, alpha)
+            print('Validation AUC is {}'.format(val_auc))
             if val_auc > best_val_auc:
                 best_val_auc = val_auc
+                best_val_auc_min = val_auc_min
+                best_epoch = epoch
                 max_iter = 0
 
             else:
@@ -174,10 +177,12 @@ def train(model, lr, weight_decay, train_dataset, val_dataset, epochs, criterion
 
 
     print("Finished Training")
-    print("AUC was {} on epoch {}".format(val_auc, epoch))
-
-
-    return val_auc, epoch, val_auc_min, training_time
+    if eval_epoch == 1:
+        print("AUC was {} on epoch {}".format(best_val_auc, epoch))
+        return best_val_auc, best_epoch, best_val_auc_min, training_time
+    else:
+        print("AUC was {} on epoch {}".format(val_auc, epoch))
+        return val_auc, epoch, val_auc_min, training_time
 
 
 
