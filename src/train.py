@@ -1,6 +1,6 @@
 import torch
 from datasets.main import load_dataset
-from model import CIFAR_VGG3, MNIST_VGG3, MNIST_VGG3_pre
+from model import CIFAR_VGG3, MNIST_VGG3, MNIST_VGG3_pre, CIFAR_VGG3_pre
 import os
 import numpy as np
 import pandas as pd
