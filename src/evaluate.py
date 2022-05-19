@@ -203,10 +203,17 @@ if __name__ == '__main__':
         download_data = True
         indexes = create_reference(contamination, dataset, normal_class, 'train', data_path, download_data, N, seed)
 
+    #Initialise the model
     if model_type == 'CIFAR_VGG3':
-        model = CIFAR_VGG3(vector_size)
+        if args.pretrain == 1:
+            model = CIFAR_VGG3_pre(vector_size)
+        else:
+            model = CIFAR_VGG3(vector_size)
     elif model_type == 'MNIST_VGG3':
-        model = MNIST_VGG3(vector_size)
+        if args.pretrain == 1:
+            model = MNIST_VGG3_pre(vector_size)
+        else:
+            model = MNIST_VGG3(vector_size)
 
 
     model.load_state_dict(torch.load(model_path + model_name))

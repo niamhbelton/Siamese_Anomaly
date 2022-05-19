@@ -23,13 +23,6 @@ class CIFAR_VGG3(nn.Module):
       self.block8=models.vgg16().features[16]
       self.classifier = nn.Linear(4096, vector_size,bias=False)
 
-      # self.classifier = nn.Linear(1568, 512)
-
-    #   self.classifier = nn.Linear(1568, 64)
-
-    #  self.classifier = nn.Linear(1568, 2048)
-
-
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
       x= self.block1(x)
@@ -49,15 +42,9 @@ class CIFAR_VGG3(nn.Module):
       x=self.act(x)
       x= self.block8(x)
       x=self.act(x)
-
-
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
-     # x = self.act5(x)
-    #  x = self.drop(x)
-     # x = self.classifier2(x)
       x=nn.Sigmoid()(x)
-
       return x #output
 
 
@@ -79,12 +66,6 @@ class CIFAR_VGG3_pre(nn.Module):
       self.block8=models.vgg16(pretrained = True).features[16]
       self.classifier = nn.Linear(4096, vector_size,bias=False)
 
-      # self.classifier = nn.Linear(1568, 512)
-
-    #   self.classifier = nn.Linear(1568, 64)
-
-    #  self.classifier = nn.Linear(1568, 2048)
-
 
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
@@ -109,9 +90,6 @@ class CIFAR_VGG3_pre(nn.Module):
 
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
-     # x = self.act5(x)
-    #  x = self.drop(x)
-     # x = self.classifier2(x)
       x=nn.Sigmoid()(x)
 
       return x #output
@@ -134,12 +112,6 @@ class MNIST_VGG3(nn.Module):
       self.block8=models.vgg16().features[16]
       self.classifier = nn.Linear(2304, vector_size,bias=False)
 
-      # self.classifier = nn.Linear(1568, 512)
-
-    #   self.classifier = nn.Linear(1568, 64)
-
-
-
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
       x= self.block1(x)
@@ -163,9 +135,6 @@ class MNIST_VGG3(nn.Module):
 
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
-     # x = self.act5(x)
-    #  x = self.drop(x)
-     # x = self.classifier2(x)
       x=nn.Sigmoid()(x)
 
       return x #output
@@ -191,11 +160,6 @@ class MNIST_VGG3_pre(nn.Module):
       self.block8=models.vgg16(pretrained = True).features[16]
       self.classifier = nn.Linear(2304, vector_size,bias=False)
 
-      # self.classifier = nn.Linear(1568, 512)
-
-    #   self.classifier = nn.Linear(1568, 64)
-
-
 
   def forward(self, x):
       x = torch.unsqueeze(x, dim =0)
@@ -216,13 +180,8 @@ class MNIST_VGG3_pre(nn.Module):
       x=self.act(x)
       x= self.block8(x)
       x=self.act(x)
-
-
       x = x.view(x.size(0), -1)
       x = self.classifier(x)
-     # x = self.act5(x)
-    #  x = self.drop(x)
-     # x = self.classifier2(x)
       x=nn.Sigmoid()(x)
 
       return x #output
